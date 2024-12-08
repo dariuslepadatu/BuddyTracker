@@ -1,0 +1,48 @@
+services:
+  redis:
+    image: redis:6.2-alpine
+    restart: always
+    ports:
+      - '6379:6379'
+    command: redis-server --save 60 1 --loglevel warning --requirepass redis2024
+    healthcheck:
+      test: redis-cli ping
+      interval: 3s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - ./redis_data:/data:rw
+    networks:
+      - redis_network
+
+  redis-insight:
+    image: redis/redisinsight:latest
+    restart: always
+    ports:
+      - "5540:5540"
+    networks:
+      - redis_network
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:25.0.4
+    restart: always
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+    command: start-dev
+    ports:
+      - "8080:8080"
+    networks:
+      - keycloak-network
+    volumes:
+      - ./keycloak_data:/opt/keycloak/data
+
+volumes:
+  keycloak-data:
+    driver: local
+
+networks:
+  redis_network:
+    driver: bridge
+  keycloak-network:
+    driver: bridge
