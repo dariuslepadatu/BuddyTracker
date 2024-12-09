@@ -57,12 +57,14 @@ def get_group():
     # TODO: creates group (key: "group:{group_id}" value: {"invited": [], "members": []})
     group_id = request.data.group_id
     user_id = request.data.user_id
+    pass
 
 @ops_db.route('/get_group')
 def get_group():
     # TODO: gets group invited list and members list (key: "group:{group_id}" value: {"invited": [], "members": []})
     group_id = request.data.group_id
     user_id = request.data.user_id
+    pass
 
 
 
@@ -70,6 +72,7 @@ def get_group():
 def get_groups():
     # TODO: gets user groups (key: "user_groups:{user_id}" value: {"invitations": [], "groups": []})
     user_id = request.data.user_id
+    pass
 
 @ops_db.route('/invite_to_group')
 def invite_to_group():
@@ -108,4 +111,17 @@ def delete_member_from_group():
     pass
 
 
+@ops_db.route('/send_message_to_group')
+def send_message_to_group():
+    # TODO updates list of messages in group_chat (key:"group_chat:{group_id}" value: ["{timestamp}: {user_id}: Mesaj 1", ....])
+    group_id = request.data.group_id
+    user_id = request.data.user_id
+    message = request.data.message
+    pass
 
+@ops_db.route('/get_messages_from_group')
+def send_message_to_group():
+    # TODO gets list of messages in group_chat (key:"group_chat:{group_id}" value: ["{timestamp}: {user_id}: Mesaj 1", ....])
+    group_id = request.data.group_id
+    user_id = request.data.user_id
+    pass
