@@ -20,7 +20,8 @@ def create_app():
     app.redis = redis_client
     cors.init_app(app)
 
-    from api.ops_redis import ops_db
-    app.register_blueprint(ops_db, url_prefix='/db')
-
+    from api.ops_redis import ops_redis
+    app.register_blueprint(ops_redis, url_prefix='/db')
+    from api.ops_keycloak import ops_keycloak
+    app.register_blueprint(ops_keycloak, url_prefix='/identity')
     return app

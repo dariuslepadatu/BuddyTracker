@@ -1,10 +1,9 @@
 import os
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv('darius.env')
 
 class Config:
-    # Define your environment variables here
     KEYCLOAK_URL = os.getenv('KEYCLOAK_URL')
     KEYCLOAK_REALM = os.getenv('KEYCLOAK_REALM')
     KEYCLOAK_CLIENT_ID = os.getenv('KEYCLOAK_CLIENT_ID')
