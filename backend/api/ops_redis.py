@@ -53,7 +53,7 @@ def get_location():
     pass
 
 @ops_db.route('/set_group')
-def get_group():
+def set_group():
     # TODO: creates group (key: "group:{group_id}" value: {"invited": [], "members": []})
     group_id = request.data.group_id
     user_id = request.data.user_id
@@ -120,7 +120,7 @@ def send_message_to_group():
     pass
 
 @ops_db.route('/get_messages_from_group')
-def send_message_to_group():
+def get_messages_from_group():
     # TODO gets list of messages in group_chat (key:"group_chat:{group_id}" value: ["{timestamp}: {user_id}: Mesaj 1", ....])
     group_id = request.data.group_id
     user_id = request.data.user_id
