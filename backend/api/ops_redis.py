@@ -21,31 +21,70 @@ def get_redis():
     return f"Value from Redis: {value}"
 
 
-@ops_redis.route('/set_sid')
+@ops_redis.route('/set_sid', methods=['POST'])
 def set_sid():
     # TODO: updates user sid (key: "sid:{user_id}" value: sid)
-    user_id = get_safe(request, 'user_id')
-    sid =  get_safe(request, 'sid')
-    pass
+    # user_id = get_safe(request, 'user_id')
+    # sid =  get_safe(request, 'sid')
+    user_id = request.json.get('user_id')
+    sid = request.json.get('sid')
 
-@ops_redis.route('/get_sid')
+    redis_key = f"sid:{user_id}"
+    app.redis.set(redis_key, sid)
+
+    return jsonify({"message": f"Session ID for user {user_id} set to {sid}"}), 200
+
+
+@ops_redis.route('/get_sid', methods=['GET'])
 def get_sid():
     # TODO: gets user sid (key: "sid:{user_id}" value: sid)
-    user_id = get_safe(request, 'user_id')
-    pass
+    user_id = request.json.get('user_id')
+
+    redis_key = f"sid:{user_id}"
+    sid = app.redis.get(redis_key)
+
+    if not sid:
+        # nu exista in baza de data
+        return jsonify({"error": f"No session ID found for user {user_id}"}), 404
+
+    return jsonify({"user_id": user_id, "sid": sid}), 200
 
 @ops_redis.route('/delete_sid')
 def delete_sid():
     # TODO: deletes user both key and value sid (key: "sid:{user_id}" value: sid)
-    user_id = get_safe(request, 'user_id')
+    # TODO: nu merge (idk de ce)
+    # user_id = request.json.get('user_id')
+    # redis_key = f"sid:{user_id}"
+    # sid = app.redis.get(redis_key)
+    #
+    # if not sid:
+    #     # nu exista in baza de data
+    #     return jsonify({"error": f"No session ID found for user {user_id}"}), 404
+    #
+    # app.redis.delete(redis_key)
+    #
+    # if app.redis.exists(redis_key):
+    #     # nu s-a putut sterge
+    #     return jsonify({"error": f"Failed to delete session ID for user {user_id}"}), 500
+    # return jsonify({"message": f"Session ID for user {user_id} has been deleted."}), 200
     pass
 
 @ops_redis.route('/set_location')
 def set_location():
     # TODO: updates user location (key: "location:{user_id}" value: {"latitude": "", "longitude:""})
-    user_id = get_safe(request, 'user_id')
-    latitude = get_safe(request, 'latitude')
-    longitude = get_safe(request, 'longitude')
+    # TODO: nu merge idk de ce
+    # user_id = request.json.get('user_id')
+    # latitude = request.json.get('latitude')
+    # longitude = request.json.get('longitude')
+    #
+    # redis_key = f"location:{user_id}"
+    # redis_value = f"latitude:{latitude}, longitude:{longitude}"
+    #
+    # app.redis.set(redis_key, redis_value)
+    #
+    # if app.redis.get(redis_key) != redis_value:
+    #     return jsonify({"message": f"Error set_location for user {user_id}"}), 500
+    # return jsonify({"message": f"Location updated for user {user_id}"}), 200
     pass
 
 
