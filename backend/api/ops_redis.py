@@ -52,7 +52,7 @@ def get_sid():
 @ops_redis.route('/delete_sid')
 def delete_sid():
     # TODO: deletes user both key and value sid (key: "sid:{user_id}" value: sid)
-    # TODO: nu merge (idk de ce)
+    # TODO: nu merge idk de ce
     # user_id = request.json.get('user_id')
     # redis_key = f"sid:{user_id}"
     # sid = app.redis.get(redis_key)
