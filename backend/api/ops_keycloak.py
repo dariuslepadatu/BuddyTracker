@@ -119,7 +119,8 @@ def login():
 @ops_keycloak.route('/validate', methods=['POST'])
 def validate():
     token = get_safe(request, 'access_token')
-
+    if not token:
+        return jsonify({'error': 'Missing parameters'}), 400
 
     # Request payload
     payload = {
@@ -139,6 +140,36 @@ def validate():
                 return jsonify({'error': 'Token is invalid or expired'}), 401
         else:
             return jsonify({'error': 'Failed to introspect token', 'details': response.json()}), response.status_code
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@ops_keycloak.route('/refresh', methods=['POST'])
+def refresh_token():
+    refresh_token = get_safe(request, 'refresh_token')
+    if not refresh_token:
+        return jsonify({'error': 'Missing parameters'}), 400
+
+    payload = {
+        'grant_type': 'refresh_token',
+        'refresh_token': refresh_token,
+        'client_id': app.config['KEYCLOAK_CLIENT_ID'],
+        'client_secret': app.config['KEYCLOAK_CLIENT_SECRET']
+    }
+
+    try:
+        response = requests.post(app.config['USER_TOKEN_URL'], data=payload)
+        print(response.text)
+        if response.status_code == 200:
+            token_data = response.json()
+            return jsonify({
+                'access_token': token_data.get('access_token'),
+                'refresh_token': token_data.get('refresh_token'),
+                'expires_in': token_data.get('expires_in')
+            }), 200
+        else:
+            return jsonify({'error': 'Failed to refresh token', 'details': response.json()}), response.status_code
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
