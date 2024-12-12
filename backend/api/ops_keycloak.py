@@ -114,3 +114,31 @@ def login():
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+@ops_keycloak.route('/validate', methods=['POST'])
+def validate():
+    token = get_safe(request, 'access_token')
+
+
+    # Request payload
+    payload = {
+        'token': token,
+        'client_id': app.config['KEYCLOAK_CLIENT_ID'],
+        'client_secret': app.config['KEYCLOAK_CLIENT_SECRET']
+    }
+
+    try:
+        response = requests.post(app.config['INTROSPECT_URL'], data=payload)
+
+        if response.status_code == 200:
+            introspection_data = response.json()
+            if introspection_data.get('active'):
+                return jsonify({'message': 'Token is valid'}), 200
+            else:
+                return jsonify({'error': 'Token is invalid or expired'}), 401
+        else:
+            return jsonify({'error': 'Failed to introspect token', 'details': response.json()}), response.status_code
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
