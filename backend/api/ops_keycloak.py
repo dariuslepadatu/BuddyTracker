@@ -160,7 +160,6 @@ def refresh_token():
 
     try:
         response = requests.post(app.config['USER_TOKEN_URL'], data=payload)
-        print(response.text)
         if response.status_code == 200:
             token_data = response.json()
             return jsonify({
