@@ -29,7 +29,7 @@ def get_admin_token():
 
 # Endpoint to register a new user in Keycloak
 @ops_keycloak.route('/register', methods=['POST'])
-def register_user():
+def register():
     username = get_safe(request, 'username')
     email = get_safe(request, 'email')
     password = get_safe(request, 'password')
@@ -74,5 +74,43 @@ def register_user():
             return jsonify({'error': 'User already exists'}), 409
         else:
             return jsonify({'error': 'Failed to create user', 'details': response.json()}), response.status_code
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@ops_keycloak.route('/login', methods=['POST'])
+def login():
+    username = get_safe(request, 'username')
+    password = get_safe(request, 'password')
+
+    if not username  or not password:
+        return jsonify({'error': 'Missing parameters'}), 400
+
+    # Request payload
+    payload = {
+        'client_id': app.config['KEYCLOAK_CLIENT_ID'],
+        'username': username,
+        'password': password,
+        'client_secret': app.config['KEYCLOAK_CLIENT_SECRET'],
+        'grant_type': 'password'
+    }
+
+    try:
+        response = requests.post(app.config['USER_TOKEN_URL'], data=payload)
+
+        # If successful, return tokens
+        if response.status_code == 200:
+            tokens = response.json()
+            return jsonify({
+                'access_token': tokens['access_token'],
+                'refresh_token': tokens['refresh_token'],
+                'expires_in': tokens['expires_in'],
+                'refresh_expires_in': tokens['refresh_expires_in']
+            }), 200
+
+        # If login fails
+        else:
+            return jsonify({'error': 'Invalid credentials or login failed'}), response.status_code
+
     except Exception as e:
         return jsonify({'error': str(e)}), 500
