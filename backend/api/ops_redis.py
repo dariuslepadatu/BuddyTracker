@@ -50,43 +50,43 @@ def get_sid():
 
     return jsonify({"user_id": user_id, "sid": sid}), 200
 
-@ops_redis.route('/delete_sid')
+@ops_redis.route('/delete_sid', methods=['DELETE'])
 def delete_sid():
     # TODO: deletes user both key and value sid (key: "sid:{user_id}" value: sid)
     # TODO: nu merge idk de ce
-    # user_id = request.json.get('user_id')
-    # redis_key = f"sid:{user_id}"
-    # sid = app.redis.get(redis_key)
-    #
-    # if not sid:
-    #     # nu exista in baza de data
-    #     return jsonify({"error": f"No session ID found for user {user_id}"}), 404
-    #
-    # app.redis.delete(redis_key)
-    #
-    # if app.redis.exists(redis_key):
-    #     # nu s-a putut sterge
-    #     return jsonify({"error": f"Failed to delete session ID for user {user_id}"}), 500
-    # return jsonify({"message": f"Session ID for user {user_id} has been deleted."}), 200
-    pass
+    user_id = request.json.get('user_id')
+    redis_key = f"sid:{user_id}"
+    sid = app.redis.get(redis_key)
 
-@ops_redis.route('/set_location')
+    if not sid:
+        # nu exista in baza de data
+        return jsonify({"error": f"No session ID found for user {user_id}"}), 404
+
+    app.redis.delete(redis_key)
+
+    if app.redis.exists(redis_key):
+        # nu s-a putut sterge
+        return jsonify({"error": f"Failed to delete session ID for user {user_id}"}), 500
+    return jsonify({"message": f"Session ID for user {user_id} has been deleted."}), 200
+
+
+@ops_redis.route('/set_location', methods=['POST'])
 def set_location():
     # TODO: updates user location (key: "location:{user_id}" value: {"latitude": "", "longitude:""})
     # TODO: nu merge idk de ce
-    # user_id = request.json.get('user_id')
-    # latitude = request.json.get('latitude')
-    # longitude = request.json.get('longitude')
-    #
-    # redis_key = f"location:{user_id}"
-    # redis_value = f"latitude:{latitude}, longitude:{longitude}"
-    #
-    # app.redis.set(redis_key, redis_value)
-    #
-    # if app.redis.get(redis_key) != redis_value:
-    #     return jsonify({"message": f"Error set_location for user {user_id}"}), 500
-    # return jsonify({"message": f"Location updated for user {user_id}"}), 200
-    pass
+    user_id = request.json.get('user_id')
+    latitude = request.json.get('latitude')
+    longitude = request.json.get('longitude')
+
+    redis_key = f"location:{user_id}"
+    redis_value = f"latitude:{latitude}, longitude:{longitude}"
+
+    app.redis.set(redis_key, redis_value)
+
+    if app.redis.get(redis_key) != redis_value:
+        return jsonify({"message": f"Error set_location for user {user_id}"}), 500
+    return jsonify({"message": f"Location updated for user {user_id}"}), 200
+
 
 
 @ops_redis.route('/get_location')
