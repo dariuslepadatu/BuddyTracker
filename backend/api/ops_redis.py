@@ -101,7 +101,7 @@ def set_group():
     group_id = request.json.get('group_id')
 
     if not user_id or not group_id:
-        return jsonify({"error": "user_id and group_id are required"}), 400
+        return jsonify({'error': 'Missing parameters'}), 400
 
     # ============================ CODE TO BE REVISITED ==================================
         # USER sends a list of ivited people and memebers, remeber to add user as well
@@ -157,22 +157,17 @@ def get_group():
 
 @ops_redis.route('/get_groups', methods=['POST']) # TODO chage to GET
 def get_groups():
-    # TODO: gets user groups (key: "user_groups:{user_id}" value: {"invitations": [], "groups": []})
-    user_id = get_safe(request, 'user_id')
+    user_id  = get_safe(request, 'user_id')
+    if not user_id:
+        return jsonify({'error': 'Missing parameters'}), 400
+    user_groups_key = f"user_groups:{user_id}"
+    user_data = app.redis.get(user_groups_key)
+    if user_data:
+        user_data = json.loads(user_data)
+        return jsonify({"groups": user_data["groups"]}), 200
+    return jsonify({"groups": []}), 200
 
-    # Construct the pattern dynamically using the variable
-    pattern = f"{user_id}:*"
 
-    # Scan for keys matching the pattern
-    keys = app.redis.scan_iter(pattern) 
-
-    # Retrieve values for all matching keys
-    result = {key: app.redis.get(key) for key in keys}
-
-    if not result:
-        return jsonify({"error": f"No groups for {user_id}"}), 404
-
-    return result, 200
 
 @ops_redis.route('/invite_to_group')
 def invite_to_group():
