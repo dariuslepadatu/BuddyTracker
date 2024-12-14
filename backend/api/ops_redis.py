@@ -1,3 +1,5 @@
+import json
+
 from flask import Blueprint, jsonify, request, current_app as app
 
 from api.utils import get_safe
@@ -95,25 +97,47 @@ def get_location():
 @ops_redis.route('/set_group', methods=['POST'])
 def set_group():
     # TODO: creates group (key: "group:{group_id}" value: {"invited": [], "members": []})
-    # USER sends a list of ivited people and memebers, remeber to add user as well
-
-    user_id  = request.json.get('user_id')
+    user_id = request.json.get('user_id')
     group_id = request.json.get('group_id')
-    invited  = request.json.get('invited')
-    members  = request.json.get('members')
 
-    members.append(user_id)
+    if not user_id or not group_id:
+        return jsonify({"error": "user_id and group_id are required"}), 400
 
-    # Set group_id and the user_id of creator as key
-    redis_key   = f"{user_id}:{group_id}"
-    redis_value = f"{{\"invited\": {invited}, \"members\": {members}}}"
-    
-    app.redis.set(redis_key, redis_value)
-    
-    if app.redis.get(redis_key) != redis_value:
-        return jsonify({"message": f"Error set_group for {user_id}"}), 500
-    
-    return jsonify({"message": f"Group created by {user_id}"}), 200
+    # ============================ CODE TO BE REVISITED ==================================
+        # USER sends a list of ivited people and memebers, remeber to add user as well
+        # user_id  = request.json.get('user_id')
+        # group_id = request.json.get('group_id')
+        # invited  = request.json.get('invited')
+        # members  = request.json.get('members')
+        #
+        # members.append(user_id)
+        #
+        # # Set group_id and the user_id of creator as key
+        # redis_key   = f"{user_id}:{group_id}"
+        # redis_value = f"{{\"invited\": {invited}, \"members\": {members}}}"
+        #
+        # app.redis.set(redis_key, redis_value)
+        #
+        # if app.redis.get(redis_key) != redis_value:
+        #     return jsonify({"message": f"Error set_group for {user_id}"}), 500
+
+
+    # Add group_id to user groups
+    user_groups_key = f"user_groups:{user_id}"
+    user_data = app.redis.get(user_groups_key)
+    if user_data:
+        user_data = json.loads(user_data)
+    else:
+        user_data = {"invitations": [], "groups": []}
+
+    # Add group ID to user's groups if not already present
+    if group_id not in user_data["groups"]:
+        user_data["groups"].append(group_id)
+        app.redis.set(user_groups_key, json.dumps(user_data))
+    else:
+        return jsonify({"error": "User is already a member of that group"}), 400
+
+    return jsonify({"message": f"Group {group_id} updated for user {user_id}"}), 200
 
 
 @ops_redis.route('/get_group', methods=['POST']) # TODO chage to GET
