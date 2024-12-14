@@ -36,7 +36,7 @@ def set_sid():
     return jsonify({"message": f"Session ID for user {user_id} set to {sid}"}), 200
 
 
-@ops_redis.route('/get_sid', methods=['POST'])
+@ops_redis.route('/get_sid', methods=['GET'])
 def get_sid():
     # TODO: gets user sid (key: "sid:{user_id}" value: sid)
     user_id = request.json.get('user_id')
@@ -89,10 +89,22 @@ def set_location():
 
 
 
-@ops_redis.route('/get_location')
+@ops_redis.route('/get_location',  methods=['GET'])
 def get_location():
     # TODO: gets user location (key: "location:{user_id}" value: {"latitude":"" , "longitude":""})
-    pass
+    user_id = request.json.get("user_id")
+
+    if not user_id:
+        return jsonify({"error": "Missing user_id parameter"}), 400
+
+    redis_key = f"location:{user_id}"
+    location_data = app.redis.get(redis_key)
+
+    if not location_data:
+        return jsonify({"error": "Location not found for the given user_id"}), 404
+
+    return jsonify({"user_id": user_id, "location": location_data}), 200
+
 
 @ops_redis.route('/set_group', methods=['POST'])
 def set_group():
