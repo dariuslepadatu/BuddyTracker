@@ -172,3 +172,29 @@ def refresh_token():
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+@ops_keycloak.route('/get_users', methods=['GET'])
+def get_users():
+    admin_token = get_admin_token()
+    if not admin_token:
+        return jsonify({'error': 'Failed to get admin token'}), 500
+
+    headers = {
+        'Authorization': f'Bearer {admin_token}',
+        'Content-Type': 'application/json'
+    }
+
+    try:
+        # Send request to get the list of users from Keycloak
+        response = requests.get(app.config['USER_URL'], headers=headers)
+
+        # Check if the request was successful
+        if response.status_code == 200:
+            users = response.json()
+            usernames = [user['username'] for user in users]
+            return jsonify(usernames), 200
+        else:
+            return jsonify({'error': 'Failed to fetch users from Keycloak', 'details': response.json()}), response.status_code
+    except Exception as e:
+        return jsonify({'error': f'Error: {str(e)}'}), 500
