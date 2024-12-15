@@ -1,7 +1,7 @@
 import os
 from dotenv import load_dotenv
 
-load_dotenv('alexia.env')
+load_dotenv('darius.env')
 
 class Config:
     KEYCLOAK_URL = os.getenv('KEYCLOAK_URL')

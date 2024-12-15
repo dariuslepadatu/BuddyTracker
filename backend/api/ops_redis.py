@@ -48,7 +48,7 @@ def get_sid():
         # nu exista in baza de data
         return jsonify({"error": f"No session ID found for user {user_id}"}), 404
 
-    return jsonify({"user_id": user_id, "sid": sid}), 200
+    return jsonify({"sid": sid}), 200
 
 @ops_redis.route('/delete_sid', methods=['DELETE'])
 def delete_sid():
@@ -73,18 +73,20 @@ def delete_sid():
 @ops_redis.route('/set_location', methods=['POST'])
 def set_location():
     # TODO: updates user location (key: "location:{user_id}" value: {"latitude": "", "longitude:""})
-    # TODO: nu merge idk de ce
     user_id = request.json.get('user_id')
     latitude = request.json.get('latitude')
     longitude = request.json.get('longitude')
 
     redis_key = f"location:{user_id}"
-    redis_value = f"latitude:{latitude}, longitude:{longitude}"
+    redis_value = {"latitude": latitude, "longitude": longitude}
 
-    app.redis.set(redis_key, redis_value)
+    app.redis.set(redis_key, json.dumps(redis_value))
 
-    if app.redis.get(redis_key) != redis_value:
-        return jsonify({"message": f"Error set_location for user {user_id}"}), 500
+    stored_value = json.loads(app.redis.get(redis_key))
+
+    if stored_value != redis_value:
+        return jsonify({"message": f"Error setting location for user {user_id}"}), 500
+
     return jsonify({"message": f"Location updated for user {user_id}"}), 200
 
 
@@ -98,12 +100,12 @@ def get_location():
         return jsonify({"error": "Missing user_id parameter"}), 400
 
     redis_key = f"location:{user_id}"
-    location_data = app.redis.get(redis_key)
+    location_data = json.loads(app.redis.get(redis_key))
 
     if not location_data:
         return jsonify({"error": "Location not found for the given user_id"}), 404
 
-    return jsonify({"user_id": user_id, "location": location_data}), 200
+    return jsonify({"latitude": location_data["latitude"], "longitude": location_data["longitude"]}), 200
 
 
 @ops_redis.route('/set_group', methods=['POST'])
@@ -169,6 +171,7 @@ def get_group():
 
 @ops_redis.route('/get_groups', methods=['POST']) # TODO chage to GET
 def get_groups():
+    # Gets list of groups the user is a member of
     user_id  = get_safe(request, 'user_id')
     if not user_id:
         return jsonify({'error': 'Missing parameters'}), 400
