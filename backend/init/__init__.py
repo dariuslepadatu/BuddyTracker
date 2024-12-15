@@ -24,4 +24,6 @@ def create_app():
     app.register_blueprint(ops_redis, url_prefix='/db')
     from api.ops_keycloak import ops_keycloak
     app.register_blueprint(ops_keycloak, url_prefix='/identity')
+    from api.ops_endpoints import ops_endpoints
+    app.register_blueprint(ops_endpoints)
     return app
