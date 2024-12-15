@@ -53,6 +53,7 @@ def token_required(f):
             if response.status_code == 200:
                 introspection_data = response.json()
                 if introspection_data.get('active'):
+                    request.user_id = response.json()['username']
                     return f(*args, **kwargs)
                 else:
                     return jsonify({'error': 'Token is invalid or expired'}), 401
