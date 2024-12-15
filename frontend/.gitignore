@@ -51,7 +51,7 @@ yarn-error.log
 **/fastlane/Preview.html
 **/fastlane/screenshots
 **/fastlane/test_output
-
+package-lock.json
 # Bundle artifact
 *.jsbundle
 
