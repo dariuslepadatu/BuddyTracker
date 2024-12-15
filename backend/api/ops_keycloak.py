@@ -27,6 +27,43 @@ def get_admin_token():
         print(f"Error getting admin token: {str(e)}")
         return None
 
+def token_required(f):
+    def decorated_function(*args, **kwargs):
+        auth_header = request.headers.get('Authorization')
+
+        if not auth_header:
+            return jsonify({'error': 'Authorization header is missing'}), 401
+
+        parts = auth_header.split()
+
+        if len(parts) != 2 or parts[0].lower() != 'bearer':
+            return jsonify({'error': 'Authorization header must be in Bearer <token> format'}), 401
+
+        token = parts[1]
+
+        payload = {
+            'token': token,
+            'client_id': app.config['KEYCLOAK_CLIENT_ID'],
+            'client_secret': app.config['KEYCLOAK_CLIENT_SECRET']
+        }
+
+        try:
+            response = requests.post(app.config['INTROSPECT_URL'], data=payload)
+
+            if response.status_code == 200:
+                introspection_data = response.json()
+                if introspection_data.get('active'):
+                    return f(*args, **kwargs)
+                else:
+                    return jsonify({'error': 'Token is invalid or expired'}), 401
+            else:
+                return jsonify({'error': 'Failed to introspect token', 'details': response.json()}), response.status_code
+
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
+    return decorated_function
+
 # Endpoint to register a new user in Keycloak
 @ops_keycloak.route('/register', methods=['POST'])
 def register():
@@ -175,6 +212,7 @@ def refresh_token():
 
 
 @ops_keycloak.route('/get_users', methods=['GET'])
+@token_required
 def get_users():
     admin_token = get_admin_token()
     if not admin_token:
