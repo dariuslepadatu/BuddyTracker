@@ -125,11 +125,14 @@ def set_group():
     members  = []
         
     members.append(user_id)
-    
+
+
     # Set group_id and the user_id of creator as key
     redis_key   = f"group_id:{group_id}"
     redis_value = {"invited": invited, "members": members}
-    
+    if app.redis.get(redis_key):
+        return jsonify({"message": f"Group with id {group_id} already exists"}), 404
+
     app.redis.set(redis_key, json.dumps(redis_value))
     
     if app.redis.get(redis_key) != json.dumps(redis_value):
@@ -153,24 +156,29 @@ def set_group():
     return jsonify({"message": f"Group {group_id} created by user {user_id}"}), 200
 
 
-@ops_redis.route('/get_group', methods=['POST']) # TODO chage to GET
+@ops_redis.route('/get_group', methods=['GET'])
 def get_group():
     # TODO: gets group invited list and members list (key: "group:{group_id}" value: {"invited": [], "members": []})
     group_id = get_safe(request, 'group_id')
+    user_id  = get_safe(request, 'user_id')
 
     if not group_id:
-        return jsonify({"error": "Not enaugh arrguments!"}), 400
+        return jsonify({"error": "Not enough arguments!"}), 400
 
     redis_key = f"group_id:{group_id}"
-    result    = app.redis.get(redis_key)
+    result = app.redis.get(redis_key)
 
     if not result:
         return jsonify({"error": f"No group for {group_id}!"}), 404
 
-    return jsonify({redis_key: result}), 200
+    result = json.loads(result)
+    if not user_id in result['members']:
+        return jsonify({"error": f"User {user_id} is not a member of {group_id}!"}), 404
+
+    return jsonify({"group": result}), 200
 
 
-@ops_redis.route('/get_groups', methods=['POST']) # TODO chage to GET
+@ops_redis.route('/get_groups', methods=['GET']) # TODO chage to GET
 def get_groups():
     # Gets list of groups the user is a member of
     user_id  = get_safe(request, 'user_id')
@@ -181,11 +189,12 @@ def get_groups():
     user_groups_key = f"user_groups:{user_id}"
     user_data = app.redis.get(user_groups_key)
     
-    if user_data:
-        user_data = json.loads(user_data)
-        return jsonify({"groups": user_data["groups"]}), 200
-    
-    return jsonify({"groups": []}), 200
+    if not user_data:
+        return jsonify({"groups": []}), 200
+
+    user_data = json.loads(user_data)
+    return jsonify({"groups": user_data["groups"]}), 200
+
 
 
 @ops_redis.route('/invite_to_group', methods=['POST'])
@@ -196,7 +205,7 @@ def invite_to_group():
     user_id = get_safe(request, 'user_id')
 
     if not user_id or not group_id:
-        return jsonify({"error": "Not enough arrguments!"}), 500
+        return jsonify({"error": "Not enough arguments!"}), 500
 
     # First check whether the group exists or not
     group_key  = f"group_id:{group_id}"
@@ -205,7 +214,7 @@ def invite_to_group():
     if not group_data:
         return jsonify({"error": f"No group with id/name {group_id}!"}), 404
 
-    group_data = json.loads(gro)
+    group_data = json.loads(group_data)
 
     # Second set user
     user_groups_key = f"user_groups:{user_id}"
@@ -219,7 +228,7 @@ def invite_to_group():
 
     # Chek if the group_id is already present
     if group_id in user_data["invitations"]:
-        return jsonify({"error": "User is already invitated to that group"}), 400
+        return jsonify({"error": "User is already invited to that group"}), 400
         
     # Actual update of data
     group_data["invited"].append(user_id)
@@ -239,7 +248,7 @@ def accept_invitation_to_group():
     user_id = get_safe(request, 'user_id')
 
     if not user_id or not group_id:
-        return jsonify({"error": "Not enough arrguments!"}), 500
+        return jsonify({"error": "Not enough arguments!"}), 500
 
     # First check whether the group exists or not
     group_key  = f"group_id:{group_id}"
@@ -262,7 +271,7 @@ def accept_invitation_to_group():
 
     # Chek if the group_id is already present
     if group_id not in user_data["invitations"]:
-        return jsonify({"error": f"User is not invitated to group {group_id}"}), 400
+        return jsonify({"error": f"User is not invited to group {group_id}"}), 400
         
     # Actual update of data
     group_data["invited"].remove(user_id)
@@ -276,7 +285,7 @@ def accept_invitation_to_group():
     return jsonify({"message": f"User {user_id} accepted in to group {group_id}"}), 200
 
 
-@ops_redis.route('/delete_invitation_from_group', methods=['POST'])
+@ops_redis.route('/delete_invitation_from_group', methods=['DELETE'])
 def delete_invitation_from_group():
     # TODO: updates invited list in group (key: "group:{group_id}" value: {"invited": [], "members": []})
     # TODO: updates invitations in user groups (key: "user_groups:{user_id}" value: {"invitations": [], "groups": []})
@@ -284,7 +293,7 @@ def delete_invitation_from_group():
     user_id = get_safe(request, 'user_id')
 
     if not user_id or not group_id:
-        return jsonify({"error": "Not enough arrguments!"}), 500
+        return jsonify({"error": "Not enough arguments!"}), 500
 
     # First check whether the group exists or not
     group_key  = f"group_id:{group_id}"
@@ -299,15 +308,15 @@ def delete_invitation_from_group():
     user_groups_key = f"user_groups:{user_id}"
     user_data = app.redis.get(user_groups_key)
 
-    # Check wether user_groups exists, if not create it 
+    # Check weather user_groups exists, if not create it
     if user_data:
         user_data = json.loads(user_data)
     else:
         user_data = {"invitations": [], "groups": []}
 
-    # Chek if the group_id is already present
+    # Check if the group_id is already present
     if group_id not in user_data["invitations"]:
-        return jsonify({"error": "User is not invitated to that group"}), 400
+        return jsonify({"error": "User is not invited to that group"}), 400
         
     # Actual update of data
     group_data["invited"].remove(user_id)
@@ -319,7 +328,7 @@ def delete_invitation_from_group():
     return jsonify({"message": f"User {user_id} invition to group {group_id} removed!"}), 200
 
 
-@ops_redis.route('/delete_member_from_group', methods=['POST']) # TODO chage to GET
+@ops_redis.route('/delete_member_from_group', methods=['DELETE'])
 def delete_member_from_group():
     # TODO: updates members list in group (key: "group:{group_id}" value: {"invited": [], "members": []})
     # TODO: updates groups in user groups (key: "user_groups:{user_id}" value: {"invitations": [], "groups": []})
@@ -364,16 +373,16 @@ def delete_member_from_group():
 
 @ops_redis.route('/send_message_to_group', methods=['POST'])
 def send_message_to_group():
-    # TODO updates list of messages in group_chat (key:"group_chat:{group_id}" value: ["{timestamp}: {user_id}: Mesaj 1", ....])
+    # Updates list of messages in group_chat (key: "group_chat:{group_id}" value: [{"timestamp": ..., "user_id": ..., "message": ...}, ...])
     group_id = get_safe(request, 'group_id')
     user_id = get_safe(request, 'user_id')
     message = get_safe(request, 'message')
 
     if not user_id or not group_id or not message:
-        return jsonify({"error": "Not enough arrguments!"}), 500
+        return jsonify({"error": "Not enough arguments!"}), 500
 
-    # Check is the group exists
-    group_key  = f"group_id:{group_id}"
+    # Check if the group exists
+    group_key = f"group_id:{group_id}"
     group_data = app.redis.get(group_key)
 
     if not group_data:
@@ -383,35 +392,40 @@ def send_message_to_group():
     group_data = json.loads(group_data)
 
     if user_id not in group_data["members"]:
-        return jsonify({"error" : f"No user wiht id {user_id} in group {group_id}!"}), 400
+        return jsonify({"error": f"No user with id {user_id} in group {group_id}!"}), 400
 
-    chat_key  = f"group_chat:{group_id}"
+    # Update the chat messages
+    chat_key = f"group_chat:{group_id}"
     chat_data = app.redis.get(chat_key)
 
-    # Create group chat if it does not exits
     if chat_data:
         chat_data = json.loads(chat_data)
     else:
         chat_data = []
-    
-    time = dt.now().isoformat()
-    chat_data.append({f"{time}: {user_id}": message})
-    
+
+    # Append the new message as a JSON object
+    chat_data.append({
+        "timestamp": dt.now().isoformat(),
+        "user_id": user_id,
+        "message": message
+    })
+
     app.redis.set(chat_key, json.dumps(chat_data))
 
-    return jsonify({"message": "Message sent successfuly!"}), 200
+    return jsonify({"message": "Message sent successfully!"}), 200
 
-@ops_redis.route('/get_messages_from_group', methods=['POST']) # TODO change with GET
+
+@ops_redis.route('/get_messages_from_group', methods=['GET'])
 def get_messages_from_group():
-    # TODO gets list of messages in group_chat (key:"group_chat:{group_id}" value: ["{timestamp}: {user_id}: Mesaj 1", ....])
+    # Gets list of messages in group_chat (key: "group_chat:{group_id}" value: [{"timestamp": ..., "user_id": ..., "message": ...}, ...])
     group_id = get_safe(request, 'group_id')
     user_id = get_safe(request, 'user_id')
 
     if not user_id or not group_id:
-        return jsonify({"error": "Not enough arrguments!"}), 500
+        return jsonify({"error": "Not enough arguments!"}), 500
 
-    # Check is the group exists
-    group_key  = f"group_id:{group_id}"
+    # Check if the group exists
+    group_key = f"group_id:{group_id}"
     group_data = app.redis.get(group_key)
 
     if not group_data:
@@ -421,19 +435,15 @@ def get_messages_from_group():
     group_data = json.loads(group_data)
 
     if user_id not in group_data["members"]:
-        return jsonify({"error" : f"No user wiht id {user_id} in group {group_id}!"}), 400
+        return jsonify({"error": f"No user with id {user_id} in group {group_id}!"}), 400
 
-    chat_key  = f"group_chat:{group_id}"
+    # Retrieve chat messages
+    chat_key = f"group_chat:{group_id}"
     chat_data = app.redis.get(chat_key)
+
+    if not chat_data:
+        return jsonify({"messages": []}), 200
 
     chat_data = json.loads(chat_data)
 
-    user_masseges = []
-
-    # get user messages wiht time
-    for data in chat_data:
-        for key in data:
-            if key.endswith(user_id):
-                user_masseges.append({key.removesuffix(f": {user_id}"): data[key]})
-
-    return {user_id: user_masseges}, 200
+    return jsonify({"messages": chat_data}), 200
