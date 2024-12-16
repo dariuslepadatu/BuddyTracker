@@ -12,25 +12,13 @@ ops_redis = Blueprint('ops_redis', __name__)
 def index():
     return "HELLO"
 
-@ops_redis.route('/set_redis')
-def set_redis():
-    app.redis.set('my_key', 'my_value')
-    print(app.config['KEYCLOAK_URL'])
-    return "Value set in Redis!"
-
-@ops_redis.route('/get_redis')
-def get_redis():
-    value = app.redis.get('my_key')
-    return f"Value from Redis: {value}"
 
 
 @ops_redis.route('/set_sid', methods=['POST'])
 def set_sid():
-    # TODO: updates user sid (key: "sid:{user_id}" value: sid)
-    # user_id = get_safe(request, 'user_id')
-    # sid =  get_safe(request, 'sid')
-    user_id = request.json.get('user_id')
-    sid = request.json.get('sid')
+    # updates user sid (key: "sid:{user_id}" value: sid)
+    user_id = get_safe(request, 'user_id')
+    sid = get_safe(request, 'sid')
 
     redis_key = f"sid:{user_id}"
     app.redis.set(redis_key, sid)
@@ -40,8 +28,8 @@ def set_sid():
 
 @ops_redis.route('/get_sid', methods=['GET'])
 def get_sid():
-    # TODO: gets user sid (key: "sid:{user_id}" value: sid)
-    user_id = request.json.get('user_id')
+    # gets user sid (key: "sid:{user_id}" value: sid)
+    user_id = get_safe(request, 'user_id')
 
     redis_key = f"sid:{user_id}"
     sid = app.redis.get(redis_key)
@@ -54,9 +42,8 @@ def get_sid():
 
 @ops_redis.route('/delete_sid', methods=['DELETE'])
 def delete_sid():
-    # TODO: deletes user both key and value sid (key: "sid:{user_id}" value: sid)
-    # TODO: nu merge idk de ce
-    user_id = request.json.get('user_id')
+    # deletes user both key and value sid (key: "sid:{user_id}" value: sid)
+    user_id = get_safe(request, 'user_id')
     redis_key = f"sid:{user_id}"
     sid = app.redis.get(redis_key)
 
@@ -74,10 +61,10 @@ def delete_sid():
 
 @ops_redis.route('/set_location', methods=['POST'])
 def set_location():
-    # TODO: updates user location (key: "location:{user_id}" value: {"latitude": "", "longitude:""})
-    user_id = request.json.get('user_id')
-    latitude = request.json.get('latitude')
-    longitude = request.json.get('longitude')
+    # updates user location (key: "location:{user_id}" value: {"latitude": "", "longitude:""})
+    user_id = get_safe(request, 'user_id')
+    latitude = get_safe(request, 'latitude')
+    longitude = get_safe(request, 'longitude')
 
     redis_key = f"location:{user_id}"
     redis_value = {"latitude": latitude, "longitude": longitude}
@@ -95,8 +82,8 @@ def set_location():
 
 @ops_redis.route('/get_location',  methods=['GET'])
 def get_location():
-    # TODO: gets user location (key: "location:{user_id}" value: {"latitude":"" , "longitude":""})
-    user_id = request.json.get("user_id")
+    # gets user location (key: "location:{user_id}" value: {"latitude":"" , "longitude":""})
+    user_id = get_safe(request, 'user_id')
 
     if not user_id:
         return jsonify({"error": "Missing user_id parameter"}), 400
@@ -112,9 +99,9 @@ def get_location():
 
 @ops_redis.route('/set_group', methods=['POST'])
 def set_group():
-    # TODO: creates group (key: "group:{group_id}" value: {"invited": [], "members": []})
-    user_id = request.json.get('user_id')
-    group_id = request.json.get('group_id')
+    # creates group (key: "group:{group_id}" value: {"invited": [], "members": []})
+    user_id = get_safe(request, 'user_id')
+    group_id = get_safe(request, 'group_id')
 
     if not user_id or not group_id:
         return jsonify({'error': 'Missing parameters'}), 400
@@ -158,7 +145,7 @@ def set_group():
 
 @ops_redis.route('/get_group', methods=['GET'])
 def get_group():
-    # TODO: gets group invited list and members list (key: "group:{group_id}" value: {"invited": [], "members": []})
+    # gets group invited list and members list (key: "group:{group_id}" value: {"invited": [], "members": []})
     group_id = get_safe(request, 'group_id')
     user_id  = get_safe(request, 'user_id')
 
@@ -181,7 +168,7 @@ def get_group():
 @ops_redis.route('/get_groups', methods=['GET']) # TODO chage to GET
 def get_groups():
     # Gets list of groups the user is a member of
-    user_id  = get_safe(request, 'user_id')
+    user_id = get_safe(request, 'user_id')
 
     if not user_id:
         return jsonify({'error': 'Missing parameters'}), 400
@@ -199,12 +186,13 @@ def get_groups():
 
 @ops_redis.route('/invite_to_group', methods=['POST'])
 def invite_to_group():
-    # TODO: updates invited list in group (key: "group:{group_id}" value: {"invited": [], "members": []})
-    # TODO: updates invitations  in user groups (key: "user_groups:{user_id}" value: {"invitations": [], "groups": []})
+    # updates invited list in group (key: "group:{group_id}" value: {"invited": [], "members": []})
+    # updates invitations  in user groups (key: "user_groups:{invited_user_id}" value: {"invitations": [], "groups": []})
     group_id = get_safe(request, 'group_id')
+    invited_user_id = get_safe(request, 'invited_user_id')
     user_id = get_safe(request, 'user_id')
 
-    if not user_id or not group_id:
+    if not user_id or not group_id or not invited_user_id:
         return jsonify({"error": "Not enough arguments!"}), 500
 
     # First check whether the group exists or not
@@ -217,7 +205,7 @@ def invite_to_group():
     group_data = json.loads(group_data)
 
     # Second set user
-    user_groups_key = f"user_groups:{user_id}"
+    user_groups_key = f"user_groups:{invited_user_id}"
     user_data = app.redis.get(user_groups_key)
 
     # Check wether user_groups exists, if not create it 
@@ -231,19 +219,19 @@ def invite_to_group():
         return jsonify({"error": "User is already invited to that group"}), 400
         
     # Actual update of data
-    group_data["invited"].append(user_id)
+    group_data["invited"].append(invited_user_id)
     app.redis.set(group_key, json.dumps(group_data))
 
     user_data["invitations"].append(group_id)
     app.redis.set(user_groups_key, json.dumps(user_data))
 
-    return jsonify({"message": f"User {user_id} invited to group {group_id}"}), 200
+    return jsonify({"message": f"User {invited_user_id} invited to group {group_id}"}), 200
 
 
 @ops_redis.route('/accept_invitation_to_group', methods=['POST'])
 def accept_invitation_to_group():
-    # TODO: updates invited list and members list in group (key: "group:{group_id}" value: {"invited": [], "members": []})
-    # TODO: updates invitations and groups  in user groups (key: "user_groups:{user_id}" value: {"invitations": [], "groups": []})
+    # updates invited list and members list in group (key: "group:{group_id}" value: {"invited": [], "members": []})
+    # updates invitations and groups  in user groups (key: "user_groups:{user_id}" value: {"invitations": [], "groups": []})
     group_id = get_safe(request, 'group_id')
     user_id = get_safe(request, 'user_id')
 
@@ -279,7 +267,7 @@ def accept_invitation_to_group():
     app.redis.set(group_key, json.dumps(group_data))
 
     user_data["invitations"].remove(group_id)
-    user_data["groups"     ].append(group_id)
+    user_data["groups"].append(group_id)
     app.redis.set(user_groups_key, json.dumps(user_data))
     
     return jsonify({"message": f"User {user_id} accepted in to group {group_id}"}), 200
@@ -287,8 +275,8 @@ def accept_invitation_to_group():
 
 @ops_redis.route('/delete_invitation_from_group', methods=['DELETE'])
 def delete_invitation_from_group():
-    # TODO: updates invited list in group (key: "group:{group_id}" value: {"invited": [], "members": []})
-    # TODO: updates invitations in user groups (key: "user_groups:{user_id}" value: {"invitations": [], "groups": []})
+    # updates invited list in group (key: "group:{group_id}" value: {"invited": [], "members": []})
+    # updates invitations in user groups (key: "user_groups:{user_id}" value: {"invitations": [], "groups": []})
     group_id = get_safe(request, 'group_id')
     user_id = get_safe(request, 'user_id')
 
@@ -330,8 +318,8 @@ def delete_invitation_from_group():
 
 @ops_redis.route('/delete_member_from_group', methods=['DELETE'])
 def delete_member_from_group():
-    # TODO: updates members list in group (key: "group:{group_id}" value: {"invited": [], "members": []})
-    # TODO: updates groups in user groups (key: "user_groups:{user_id}" value: {"invitations": [], "groups": []})
+    # updates members list in group (key: "group:{group_id}" value: {"invited": [], "members": []})
+    # updates groups in user groups (key: "user_groups:{user_id}" value: {"invitations": [], "groups": []})
     group_id = get_safe(request, 'group_id')
     user_id = get_safe(request, 'user_id')
 
