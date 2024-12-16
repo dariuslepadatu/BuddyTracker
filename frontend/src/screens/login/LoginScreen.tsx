@@ -8,6 +8,8 @@ const LoginScreen = ({  }) => {
         <View>
             <Text>Login Page</Text>
             <Button title="Go to Home" onPress={() => navigation.navigate('Home')}/>
+            <Button title="API" onPress={() => console.log(process.env.API_URL)}/>
+            <Button title="DATA" onPress={() => console.log(process.env.DATA)}/>
 
         </View>
     );
