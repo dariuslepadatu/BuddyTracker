@@ -8,12 +8,7 @@ from api.utils import get_safe
 
 ops_redis = Blueprint('ops_redis', __name__)
 
-@ops_redis.route('/', methods=['GET'])
-def index():
-    return "HELLO"
-
-
-
+# TODO Darius: check if user_id is valid using token_required decorator
 @ops_redis.route('/set_sid', methods=['POST'])
 def set_sid():
     # updates user sid (key: "sid:{user_id}" value: sid)
@@ -25,7 +20,7 @@ def set_sid():
 
     return jsonify({"message": f"Session ID for user {user_id} set to {sid}"}), 200
 
-
+# TODO Darius: check if user_id is valid using token_required decorator
 @ops_redis.route('/get_sid', methods=['GET'])
 def get_sid():
     # gets user sid (key: "sid:{user_id}" value: sid)
@@ -40,6 +35,7 @@ def get_sid():
 
     return jsonify({"sid": sid}), 200
 
+# TODO Darius: check if user_id is valid using token_required decorator
 @ops_redis.route('/delete_sid', methods=['DELETE'])
 def delete_sid():
     # deletes user both key and value sid (key: "sid:{user_id}" value: sid)
@@ -58,7 +54,7 @@ def delete_sid():
         return jsonify({"error": f"Failed to delete session ID for user {user_id}"}), 500
     return jsonify({"message": f"Session ID for user {user_id} has been deleted."}), 200
 
-
+# TODO Darius: check if user_id is valid using token_required decorator
 @ops_redis.route('/set_location', methods=['POST'])
 def set_location():
     # updates user location (key: "location:{user_id}" value: {"latitude": "", "longitude:""})
@@ -79,7 +75,7 @@ def set_location():
     return jsonify({"message": f"Location updated for user {user_id}"}), 200
 
 
-
+# TODO Darius: check if user_id is valid using token_required decorator
 @ops_redis.route('/get_location',  methods=['GET'])
 def get_location():
     # gets user location (key: "location:{user_id}" value: {"latitude":"" , "longitude":""})
@@ -96,7 +92,7 @@ def get_location():
 
     return jsonify({"latitude": location_data["latitude"], "longitude": location_data["longitude"]}), 200
 
-
+# TODO Darius: check if user_id is valid using token_required decorator
 @ops_redis.route('/set_group', methods=['POST'])
 def set_group():
     # creates group (key: "group:{group_id}" value: {"invited": [], "members": []})
@@ -142,7 +138,7 @@ def set_group():
 
     return jsonify({"message": f"Group {group_id} created by user {user_id}"}), 200
 
-
+# TODO Darius: check if user_id is valid using token_required decorator
 @ops_redis.route('/get_group', methods=['GET'])
 def get_group():
     # gets group invited list and members list (key: "group:{group_id}" value: {"invited": [], "members": []})
@@ -164,8 +160,8 @@ def get_group():
 
     return jsonify({"group": result}), 200
 
-
-@ops_redis.route('/get_groups', methods=['GET']) # TODO chage to GET
+# TODO Darius: check if user_id is valid using token_required decorator
+@ops_redis.route('/get_groups', methods=['GET'])
 def get_groups():
     # Gets list of groups the user is a member of
     user_id = get_safe(request, 'user_id')
@@ -183,14 +179,15 @@ def get_groups():
     return jsonify({"groups": user_data["groups"]}), 200
 
 
-
+# TODO Darius: check if user_id is valid using token_required decorator
 @ops_redis.route('/invite_to_group', methods=['POST'])
 def invite_to_group():
     # updates invited list in group (key: "group:{group_id}" value: {"invited": [], "members": []})
     # updates invitations  in user groups (key: "user_groups:{invited_user_id}" value: {"invitations": [], "groups": []})
     group_id = get_safe(request, 'group_id')
-    invited_user_id = get_safe(request, 'invited_user_id')
     user_id = get_safe(request, 'user_id')
+    # TODO Darius: check if invited_user_id exists in Keycloak's database
+    invited_user_id = get_safe(request, 'invited_user_id')
 
     if not user_id or not group_id or not invited_user_id:
         return jsonify({"error": "Not enough arguments!"}), 500
@@ -227,7 +224,7 @@ def invite_to_group():
 
     return jsonify({"message": f"User {invited_user_id} invited to group {group_id}"}), 200
 
-
+# TODO Darius: check if user_id is valid using token_required decorator
 @ops_redis.route('/accept_invitation_to_group', methods=['POST'])
 def accept_invitation_to_group():
     # updates invited list and members list in group (key: "group:{group_id}" value: {"invited": [], "members": []})
@@ -272,7 +269,7 @@ def accept_invitation_to_group():
     
     return jsonify({"message": f"User {user_id} accepted in to group {group_id}"}), 200
 
-
+# TODO Darius: check if user_id is valid using token_required decorator
 @ops_redis.route('/delete_invitation_from_group', methods=['DELETE'])
 def delete_invitation_from_group():
     # updates invited list in group (key: "group:{group_id}" value: {"invited": [], "members": []})
@@ -315,7 +312,7 @@ def delete_invitation_from_group():
 
     return jsonify({"message": f"User {user_id} invition to group {group_id} removed!"}), 200
 
-
+# TODO Darius: check if user_id is valid using token_required decorator
 @ops_redis.route('/delete_member_from_group', methods=['DELETE'])
 def delete_member_from_group():
     # updates members list in group (key: "group:{group_id}" value: {"invited": [], "members": []})
@@ -351,6 +348,8 @@ def delete_member_from_group():
         
     # Actual update of data
     group_data['members'] = [member for member in group_data['members'] if member != user_id]
+    # TODO Oli: if len(group_data['members']) == 0 delete group records (group_id, group_chat) from redis
+    #  and delete invitations for all users (user_group) to this group
     app.redis.set(group_key, json.dumps(group_data))
 
     user_data["groups"] = [group for group in user_data['groups'] if group != group_id]
@@ -358,7 +357,7 @@ def delete_member_from_group():
 
     return jsonify({"message": f"User {user_id} removed from group {group_id}!"}), 200
     
-
+# TODO Darius: check if user_id is valid using token_required decorator
 @ops_redis.route('/send_message_to_group', methods=['POST'])
 def send_message_to_group():
     # Updates list of messages in group_chat (key: "group_chat:{group_id}" value: [{"timestamp": ..., "user_id": ..., "message": ...}, ...])
@@ -402,7 +401,7 @@ def send_message_to_group():
 
     return jsonify({"message": "Message sent successfully!"}), 200
 
-
+# TODO Darius: check if user_id is valid using token_required decorator
 @ops_redis.route('/get_messages_from_group', methods=['GET'])
 def get_messages_from_group():
     # Gets list of messages in group_chat (key: "group_chat:{group_id}" value: [{"timestamp": ..., "user_id": ..., "message": ...}, ...])
