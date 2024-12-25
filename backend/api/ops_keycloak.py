@@ -61,7 +61,7 @@ def token_required(f):
                 return jsonify({'error': 'Failed to introspect token', 'details': response.json()}), response.status_code
 
         except Exception as e:
-            return jsonify({'error': str(e)}), 500
+            return jsonify({'error': str(e)}), 401
 
     return decorated_function
 
@@ -148,7 +148,7 @@ def login():
 
         # If login fails
         else:
-            return jsonify({'error': 'Invalid credentials or login failed'}), response.status_code
+            return jsonify({'error': 'Invalid credentials or login failed'}), 402
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
