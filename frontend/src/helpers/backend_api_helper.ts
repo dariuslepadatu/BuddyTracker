@@ -9,7 +9,7 @@ const api = axios.create({
 
 api.interceptors.response.use(
     response => {
-        return response;
+        return response.data;
     },
     error => {
         const status = error.response ? error.response.status : null;
@@ -26,7 +26,7 @@ api.interceptors.response.use(
         } else {
             console.error('Unknown Error:', error.message);
         }
-        
+
         return Promise.reject(error);
     }
 );
