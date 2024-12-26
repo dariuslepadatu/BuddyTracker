@@ -109,7 +109,6 @@ def set_group():
         
     members.append(user_id)
 
-
     # Set group_id and the user_id of creator as key
     redis_key   = f"group_id:{group_id}"
     redis_value = {"invited": invited, "members": members}
@@ -192,6 +191,9 @@ def invite_to_group():
     if not user_id or not group_id or not invited_user_id:
         return jsonify({"error": "Not enough arguments!"}), 500
 
+    if user_id == invited_user_id:
+        return jsonify({"error": "The user cannot invited himself!"}), 400
+
     # First check whether the group exists or not
     group_key  = f"group_id:{group_id}"
     group_data = app.redis.get(group_key)
@@ -211,9 +213,13 @@ def invite_to_group():
     else:
         user_data = {"invitations": [], "groups": []}
 
-    # Chek if the group_id is already present
+    # Chek if the group_id is already present in invitations
     if group_id in user_data["invitations"]:
-        return jsonify({"error": "User is already invited to that group"}), 400
+        return jsonify({"error": "User is already invited to that group!"}), 400
+
+    # Check if the user is member of the group
+    if group_id in user_data["groups"]:
+        return jsonify({"error": "User is already a member of the group!"}), 400
         
     # Actual update of data
     group_data["invited"].append(invited_user_id)
@@ -324,8 +330,9 @@ def delete_member_from_group():
         return jsonify({"error": "Not enough arrguments!"}), 500
 
     # First check whether the group exists or not
-    group_key  = f"group_id:{group_id}"
-    group_data = app.redis.get(group_key)
+    group_key      = f"group_id:{group_id}"
+    group_chat_key = f"group_chat:{group_id}"
+    group_data     = app.redis.get(group_key)
 
     if not group_data:
         return jsonify({"error": f"No group with id/name {group_id}!"}), 404
@@ -346,12 +353,30 @@ def delete_member_from_group():
     if group_id not in user_data["groups"]:
         return jsonify({"error": f"User is not in group {group_id}!"}), 400
         
-    # Actual update of data
-    group_data['members'] = [member for member in group_data['members'] if member != user_id]
-    # TODO Oli: if len(group_data['members']) == 0 delete group records (group_id, group_chat) from redis
-    #  and delete invitations for all users (user_group) to this group
-    app.redis.set(group_key, json.dumps(group_data))
+    # Delete group records (group_id, group_chat) from redis if no member remains
+    # It is meaningless to remove the user from the group data 
+    # if the group is going to be deleted anyway
+    if len(group_data['members']) == 1:
+        # Remove invitations from all the users
+        for ui_user in group_data['invited']:
+            uninvited_key  = f"user_groups:{ui_user}"
+            uninvited_data = app.redis.get(uninvited_key)
+            uninvited_data = json.loads(uninvited_data)
 
+            uninvited_data["invitations"].remove(group_id)
+
+            app.redis.set(uninvited_key, json.dumps(uninvited_data))
+            
+        # Delete the group_data and group_chat_data
+        app.redis.delete(group_key)
+        app.redis.delete(group_chat_key)
+ 
+    # Actual update of data if more the one user remains
+    else:
+        group_data['members'] = [member for member in group_data['members'] if member != user_id]
+        app.redis.set(group_key, json.dumps(group_data))
+        
+    # Remove the group from user data
     user_data["groups"] = [group for group in user_data['groups'] if group != group_id]
     app.redis.set(user_groups_key, json.dumps(user_data))
 
