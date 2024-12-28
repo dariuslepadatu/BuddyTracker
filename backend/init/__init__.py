@@ -1,7 +1,7 @@
 from flask import Flask
 from init.config import Config
 import redis
-from init.instances import cors
+from init.instances import cors, socketio
 
 
 def create_app():
@@ -19,7 +19,8 @@ def create_app():
 
     app.redis = redis_client
     cors.init_app(app)
-
+    socketio.init_app(app)
+    app.socketio = socketio
     from api.ops_redis import ops_redis
     app.register_blueprint(ops_redis, url_prefix='/db')
     from api.ops_keycloak import ops_keycloak
