@@ -6,8 +6,10 @@ from flask import Blueprint, jsonify, request, current_app as app
 
 from api.utils import get_safe
 
+
 ops_redis = Blueprint('ops_redis', __name__)
 
+# TODO Darius: change endpoint into socket event
 # TODO Darius: check if user_id is valid using token_required decorator
 @ops_redis.route('/set_sid', methods=['POST'])
 def set_sid():
@@ -54,6 +56,7 @@ def delete_sid():
         return jsonify({"error": f"Failed to delete session ID for user {user_id}"}), 500
     return jsonify({"message": f"Session ID for user {user_id} has been deleted."}), 200
 
+# TODO Darius: change endpoint into socket event
 # TODO Darius: check if user_id is valid using token_required decorator
 @ops_redis.route('/set_location', methods=['POST'])
 def set_location():
@@ -71,7 +74,18 @@ def set_location():
 
     if stored_value != redis_value:
         return jsonify({"message": f"Error setting location for user {user_id}"}), 500
-
+    # TODO Oli: broadcast the update of the location to all users
+    #  that are connected to the server and are in the same group as the user_id
+    # ========================= TODO =========================
+    # for group_id in get_groups(user_id):
+    #     for obj in get_group_sids(user_id, group_id):
+    #         sid = obj["sid"]
+    #         if sid != get_sid(user_id):
+    #             emit('user_location_in_group_update',
+    #                  { 'group_id': group_id,
+    #                          'user_id': user_id,
+    #                          "latitude": latitude,
+    #                          "longitude": longitude}, to=sid)
     return jsonify({"message": f"Location updated for user {user_id}"}), 200
 
 
@@ -92,6 +106,15 @@ def get_location():
 
     return jsonify({"latitude": location_data["latitude"], "longitude": location_data["longitude"]}), 200
 
+@ops_redis.route('/get_group_locations', methods=['GET'])
+def get_group_locations():
+    # TODO Oli: return a list of locations for all members from the group (except the location of the user)
+    # return value is [{'user_id': 'olivian', 'latitude' : 4324423, 'longitude' : 312312}, .... ]
+    user_id = get_safe(request, 'user_id')
+    group_id = get_safe(request, 'group_id')
+    pass
+
+
 # TODO Darius: check if user_id is valid using token_required decorator
 @ops_redis.route('/set_group', methods=['POST'])
 def set_group():
@@ -104,8 +127,8 @@ def set_group():
 
     # USER has a list of ivited people and memebers, 
     # remeber to add user as well
-    invited  = []
-    members  = []
+    invited = []
+    members = []
         
     members.append(user_id)
 
@@ -423,6 +446,18 @@ def send_message_to_group():
     })
 
     app.redis.set(chat_key, json.dumps(chat_data))
+
+    # TODO Oli: broadcast the message to all users
+    #  that are connected to the server and are in the same group as the user_id
+    # ========================= TODO =========================
+    # for group_id in get_groups(user_id):
+    #     for obj in get_group_sids(user_id, group_id):
+    #         sid = obj["sid"]
+    #             emit('user_message_in_group_update',
+    #                  { 'group_id': group_id,
+    #                          "timestamp": dt.now().isoformat(),
+    #                          "user_id": user_id,
+    #                          "message": message}, to=sid)
 
     return jsonify({"message": "Message sent successfully!"}), 200
 
