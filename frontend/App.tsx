@@ -4,6 +4,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { PaperProvider } from 'react-native-paper';
 import { protectedScreens, publicScreens } from './src/routes/allRoutes.ts';
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import Icon from 'react-native-vector-icons/FontAwesome';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -27,7 +28,24 @@ function PublicScreens() {
 // Protected Tab Navigator
 function ProtectedScreens() {
     return (
-        <Tab.Navigator  screenOptions={{ headerShown: false, tabBarActiveTintColor: '#C03BDE' }}>
+        <Tab.Navigator
+            screenOptions={({ route }) => ({
+                headerShown: false,
+                tabBarActiveTintColor: '#C03BDE',
+                tabBarIcon: ({ focused, color, size }) => {
+                    let iconName;
+                    if (route.name === 'Profile') {
+                        iconName = 'user';
+                    } else if (route.name === 'Login') {
+                        iconName = 'user-circle';
+                    } else if (route.name === 'Groups') {
+                        iconName = 'group';
+                    }
+                    return <Icon name={iconName} size={size} color={color} />;
+
+                },
+
+            })}>
             {protectedScreens.map((screen, idx) => (
                 <Tab.Screen
                     name={screen.name}
