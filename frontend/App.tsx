@@ -5,6 +5,9 @@ import { PaperProvider } from 'react-native-paper';
 import { protectedScreens, publicScreens } from './src/routes/allRoutes.ts';
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import Icon from 'react-native-vector-icons/FontAwesome';
+import {Platform, StyleSheet, View} from 'react-native';
+import { BlurView } from '@react-native-community/blur';
+
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -26,12 +29,17 @@ function PublicScreens() {
 }
 
 // Protected Tab Navigator
-function ProtectedScreens() {
+const ProtectedScreens = () => {
     return (
         <Tab.Navigator
             screenOptions={({ route }) => ({
+                animation: 'fade',
                 headerShown: false,
                 tabBarActiveTintColor: '#C03BDE',
+                tabBarStyle: {
+                    position: 'absolute',
+                    backgroundColor: Platform.OS === 'android' ? 'rgba(255, 255, 255, 0.5)' : 'transparent'
+                },
                 tabBarIcon: ({ focused, color, size }) => {
                     let iconName;
                     if (route.name === 'Profile') {
@@ -42,10 +50,21 @@ function ProtectedScreens() {
                         iconName = 'group';
                     }
                     return <Icon name={iconName} size={size} color={color} />;
-
                 },
-
-            })}>
+                tabBarBackground: () => (
+                    Platform.OS === 'ios' ? (
+                        <BlurView
+                            style={StyleSheet.absoluteFill}
+                            blurType="light"
+                            blurAmount={10}
+                            reducedTransparencyFallbackColor="white"
+                        />
+                    ) : (
+                        <View style={{ flex: 1, backgroundColor: 'rgba(255, 255, 255, 0.8)',}} />
+                    )
+                ),
+            })}
+        >
             {protectedScreens.map((screen, idx) => (
                 <Tab.Screen
                     name={screen.name}
@@ -56,7 +75,9 @@ function ProtectedScreens() {
             ))}
         </Tab.Navigator>
     );
-}
+};
+
+
 
 export default function App() {
     return (
