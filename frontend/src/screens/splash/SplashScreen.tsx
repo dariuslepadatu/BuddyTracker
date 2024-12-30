@@ -3,13 +3,13 @@ import { Image, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import BuddyTrackerLogo from '../../../public/logos/buddytracker-high-resolution-logo-transparent.png';
 
-const HomeScreen = () => {
+const SplashScreen = () => {
     const navigation = useNavigation();
 
     useEffect(() => {
         // Redirect to Login screen after 2 seconds
         const timer = setTimeout(() => {
-            navigation.navigate('Protected', { screen: 'Login' });
+            navigation.navigate('Public', { screen: 'Login' });
         }, 1000);
 
         // Cleanup timeout on component unmount
@@ -46,4 +46,4 @@ const styles = StyleSheet.create({
 
 });
 
-export default HomeScreen;
+export default SplashScreen;

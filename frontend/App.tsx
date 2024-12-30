@@ -44,8 +44,6 @@ const ProtectedScreens = () => {
                     let iconName;
                     if (route.name === 'Profile') {
                         iconName = 'user';
-                    } else if (route.name === 'Login') {
-                        iconName = 'user-circle';
                     } else if (route.name === 'Groups') {
                         iconName = 'group';
                     }

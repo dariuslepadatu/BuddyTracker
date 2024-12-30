@@ -44,7 +44,6 @@ api.interceptors.response.use(
                     })
                     .catch(error => {
                         console.error('Error refreshing token:', error);
-
                     });
 
             }
@@ -60,10 +59,10 @@ api.interceptors.response.use(
         } else if (status === 500) {
             console.error('Server Error:', error.response.data);
         } else {
-            console.error('Unknown Error:', error.message);
+            console.error('Unknown Error:', error.response.data);
         }
 
-        return Promise.reject(error);
+        return Promise.reject(error?.response?.data?.error);
     }
 );
 
