@@ -7,11 +7,10 @@ import Toast from 'react-native-toast-message';
 import { Formik } from 'formik';
 import * as Yup from 'yup';
 
-import {login} from '../../helpers/backend_helper.ts';
+import {login, register} from '../../helpers/backend_helper.ts';
 import ToastHelper from '../../Components/toast';
-import RegisterScreen from "../register/RegisterScreen.tsx";
 
-const LoginScreen = () => {
+const RegisterScreen = () => {
     const navigation = useNavigation();
     const [showPassword, setShowPassword] = useState(false);
 
@@ -30,28 +29,26 @@ const LoginScreen = () => {
             .test('no-spaces', 'Username cannot contain spaces', (value) => !/\s/.test(value)),
     });
 
-    const handleLogin = async (values) => {
-        login(values)
+    const handleRegister = async (values) => {
+        register(values)
             .then(async (response) => {
-                await AsyncStorage.setItem('accessToken', response.access_token);
-                await AsyncStorage.setItem('refreshToken', response.refresh_token);
-                navigation.navigate('Protected', {screen: 'Groups'});
+                navigation.navigate('Public', {screen: 'Login'});
             })
             .catch((error) => {
-                ToastHelper.error('Login Failed', error);
+                ToastHelper.error('Registration Failed', error);
             })
     };
     return (
         <SafeAreaView style={{ backgroundColor: '#fff', flex: 1, padding: 20, justifyContent:'center',alignItems: 'center'}}>
             <Toast />
             <Text variant="displayMedium" style={{ marginBottom: 50 }}>
-                Login
+                Register
             </Text>
 
             <Formik
                 initialValues={initialValues}
                 validationSchema={validationSchema}
-                onSubmit={handleLogin}
+                onSubmit={handleRegister}
             >
                 {({ handleChange, handleBlur, handleSubmit, values, errors, touched, isValid }) => (
                     <View style={{ width: '80%', gap: 20}}>
@@ -98,10 +95,10 @@ const LoginScreen = () => {
                 onPress={() => navigation.navigate('Public', { screen: 'Register' })}
                 style={{ position: 'absolute', bottom: 50}}
             >
-                <Text style={{color: '#1E90FF'}} onPress={() => navigation.navigate('Public', {screen: 'Register'})}>Not registered yet? Create your account</Text>
+                <Text style={{color: '#1E90FF'}} onPress={() => navigation.navigate('Public', {screen: 'Login'})}>Already registered? Log in</Text>
             </TouchableOpacity>
         </SafeAreaView>
     );
 };
 
-export default LoginScreen;
+export default RegisterScreen;
