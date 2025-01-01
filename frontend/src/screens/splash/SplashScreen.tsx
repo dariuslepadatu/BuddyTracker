@@ -1,20 +1,21 @@
 import React, { useEffect } from 'react';
 import { Image, SafeAreaView, StyleSheet, Text, View } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import {useFocusEffect, useNavigation} from '@react-navigation/native';
 import BuddyTrackerLogo from '../../../public/logos/buddytracker-high-resolution-logo-transparent.png';
 
 const SplashScreen = () => {
     const navigation = useNavigation();
 
-    useEffect(() => {
-        // Redirect to Login screen after 2 seconds
-        const timer = setTimeout(() => {
-            navigation.navigate('Public', { screen: 'Login' });
-        }, 1000);
+    useFocusEffect(
+        React.useCallback(() => {
+            const timer = setTimeout(() => {
+                navigation.navigate('Public', { screen: 'Login' });
+            }, 1000);
 
-        // Cleanup timeout on component unmount
-        return () => clearTimeout(timer);
-    }, []);
+            return () => clearTimeout(timer);
+        }, [navigation])
+    );
+
 
     return (
         <SafeAreaView style={styles.container}>

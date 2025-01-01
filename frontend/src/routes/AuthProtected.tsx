@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, ActivityIndicator } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import {useFocusEffect, useNavigation} from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {validate} from "../helpers/backend_helper.ts";
 import ToastHelper from "../Components/toast";
@@ -10,25 +10,28 @@ const AuthProtected = ({ children }) => {
     const [loading, setLoading] = useState(true);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-    useEffect(() => {
-        const checkAuth = async () => {
-            const accessToken = await AsyncStorage.getItem('accessToken');
-            if (!accessToken) {
-                throw new Error('No access token found');
-            }
-            validate({'access_token': accessToken})
-                .then(() => {
-                    setIsAuthenticated(true);
-                    setLoading(false);
-                })
-                .catch((error) => {
-                    ToastHelper.error('Login Failed', error);
-                    navigation.navigate('Public', {screen: 'Login'});
-                });
-        };
 
-        checkAuth();
-    }, []);
+    useFocusEffect(
+        React.useCallback(() => {
+            const checkAuth = async () => {
+                const accessToken = await AsyncStorage.getItem('accessToken');
+                if (!accessToken) {
+                    throw new Error('No access token found');
+                }
+                validate({'access_token': accessToken})
+                    .then(() => {
+                        setIsAuthenticated(true);
+                        setLoading(false);
+                    })
+                    .catch((error) => {
+                        ToastHelper.error('Login Failed', error);
+                        navigation.navigate('Public', {screen: 'Login'});
+                    });
+            };
+
+            checkAuth();
+        }, [navigation])
+    );
 
     if (loading) {
         return (
