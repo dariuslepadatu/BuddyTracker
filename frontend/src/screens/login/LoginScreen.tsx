@@ -1,15 +1,14 @@
-import React, {useState} from 'react';
-import {View, SafeAreaView, TouchableOpacity, Button} from 'react-native';
+import React, { useState } from 'react';
+import { View, SafeAreaView, TouchableOpacity, Button, StyleSheet } from 'react-native';
 import { Text, TextInput } from 'react-native-paper';
-import {useNavigation} from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Toast from 'react-native-toast-message';
 import { Formik } from 'formik';
 import * as Yup from 'yup';
 
-import {login} from '../../helpers/backend_helper.ts';
+import { login } from '../../helpers/backend_helper.ts';
 import ToastHelper from '../../Components/toast';
-import RegisterScreen from "../register/RegisterScreen.tsx";
 
 const LoginScreen = () => {
     const navigation = useNavigation();
@@ -18,7 +17,7 @@ const LoginScreen = () => {
     const initialValues = {
         username: '',
         password: ''
-    }
+    };
 
     const validationSchema = Yup.object().shape({
         username: Yup.string()
@@ -27,7 +26,7 @@ const LoginScreen = () => {
 
         password: Yup.string()
             .required('Password is required')
-            .test('no-spaces', 'Username cannot contain spaces', (value) => !/\s/.test(value)),
+            .test('no-spaces', 'Password cannot contain spaces', (value) => !/\s/.test(value)),
     });
 
     const handleLogin = async (values) => {
@@ -35,16 +34,17 @@ const LoginScreen = () => {
             .then(async (response) => {
                 await AsyncStorage.setItem('accessToken', response.access_token);
                 await AsyncStorage.setItem('refreshToken', response.refresh_token);
-                navigation.navigate('Protected', {screen: 'Groups'});
+                navigation.navigate('Protected', { screen: 'Groups' });
             })
             .catch((error) => {
                 ToastHelper.error('Login Failed', error);
-            })
+            });
     };
+
     return (
-        <SafeAreaView style={{ backgroundColor: '#fff', flex: 1, padding: 20, justifyContent:'center',alignItems: 'center'}}>
+        <SafeAreaView style={styles.container}>
             <Toast />
-            <Text variant="displayMedium" style={{ marginBottom: 50 }}>
+            <Text variant="displayMedium" style={styles.title}>
                 Login
             </Text>
 
@@ -54,19 +54,19 @@ const LoginScreen = () => {
                 onSubmit={handleLogin}
             >
                 {({ handleChange, handleBlur, handleSubmit, values, errors, touched, isValid }) => (
-                    <View style={{ width: '80%', gap: 20}}>
+                    <View style={styles.form}>
                         <View>
                             <TextInput
                                 label="Username"
                                 mode="outlined"
                                 value={values.username}
                                 onChangeText={handleChange('username')}
-                                onFocus={() => {}}
+                                onFocus={() => { }}
                                 onBlur={handleBlur('username')}
                                 error={touched.username && errors.username ? true : false}
                             />
                             {touched.username && errors.username && (
-                                <Text style={{ color: 'red', fontSize: 12 }}>{errors.username}</Text>
+                                <Text style={styles.errorText}>{errors.username}</Text>
                             )}
                         </View>
                         <View>
@@ -76,7 +76,7 @@ const LoginScreen = () => {
                                 secureTextEntry={!showPassword}
                                 value={values.password}
                                 onChangeText={handleChange('password')}
-                                onFocus={() => {}}
+                                onFocus={() => { }}
                                 onBlur={handleBlur('password')}
                                 error={touched.password && errors.password ? true : false}
                                 right={
@@ -87,21 +87,49 @@ const LoginScreen = () => {
                                 }
                             />
                             {touched.password && errors.password && (
-                                <Text style={{ color: 'red', fontSize: 12 }}>{errors.password}</Text>
+                                <Text style={styles.errorText}>{errors.password}</Text>
                             )}
                         </View>
-                        <Button title="Submit" onPress={handleSubmit} color='#C03BDE'/>
+                        <Button title="Submit" onPress={handleSubmit} color='#C03BDE' />
                     </View>
                 )}
             </Formik>
             <TouchableOpacity
                 onPress={() => navigation.navigate('Public', { screen: 'Register' })}
-                style={{ position: 'absolute', bottom: 50}}
+                style={styles.registerLinkContainer}
             >
-                <Text style={{color: '#1E90FF'}} onPress={() => navigation.navigate('Public', {screen: 'Register'})}>Not registered yet? Create your account</Text>
+                <Text style={styles.registerLinkText}>Not registered yet? Create your account</Text>
             </TouchableOpacity>
         </SafeAreaView>
     );
 };
+
+const styles = StyleSheet.create({
+    container: {
+        backgroundColor: '#fff',
+        flex: 1,
+        padding: 20,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    title: {
+        marginBottom: 50,
+    },
+    form: {
+        width: '80%',
+        gap: 20,
+    },
+    errorText: {
+        color: 'red',
+        fontSize: 12,
+    },
+    registerLinkContainer: {
+        position: 'absolute',
+        bottom: 50,
+    },
+    registerLinkText: {
+        color: '#1E90FF',
+    },
+});
 
 export default LoginScreen;
