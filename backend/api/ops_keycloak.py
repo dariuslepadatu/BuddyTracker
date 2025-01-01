@@ -102,17 +102,17 @@ def register():
         }]
     }
 
-
     # Send POST request to create user
     try:
         response = requests.post(app.config['USER_URL'], headers=headers, json=user_data)
         if response.status_code == 201:
             return jsonify({'message': 'User created successfully'}), 201
         elif response.status_code == 409:
-            return jsonify({'error': 'User already exists'}), 409
+            return jsonify({'error': response.json()['errorMessage']}), 409
         else:
             return jsonify({'error': 'Failed to create user', 'details': response.json()}), response.status_code
     except Exception as e:
+        print(e)
         return jsonify({'error': str(e)}), 500
 
 

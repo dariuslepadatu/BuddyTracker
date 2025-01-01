@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, {useEffect, useState} from 'react';
 import { View, SafeAreaView, TouchableOpacity, Button, StyleSheet } from 'react-native';
 import { Text, TextInput } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
@@ -7,12 +7,27 @@ import Toast from 'react-native-toast-message';
 import { Formik } from 'formik';
 import * as Yup from 'yup';
 
-import { login } from '../../helpers/backend_helper.ts';
+import {login, validate} from '../../helpers/backend_helper.ts';
 import ToastHelper from '../../Components/toast';
 
 const LoginScreen = () => {
     const navigation = useNavigation();
     const [showPassword, setShowPassword] = useState(false);
+
+
+    useEffect(() => {
+        const checkAuth = async () => {
+            const accessToken = await AsyncStorage.getItem('accessToken');
+            if (!accessToken) {
+                throw new Error('No access token found');
+            }
+            validate({'access_token': accessToken})
+                .then(() => {
+                  navigation.navigate('Protected', {screen: 'Groups'})
+                })
+        };
+        checkAuth();
+    }, []);
 
     const initialValues = {
         username: '',

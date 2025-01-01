@@ -7,6 +7,7 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import Icon from 'react-native-vector-icons/FontAwesome';
 import {Platform, StyleSheet, View} from 'react-native';
 import { BlurView } from '@react-native-community/blur';
+import AuthProtected from "./src/routes/AuthProtected.tsx";
 
 
 const Tab = createBottomTabNavigator();
@@ -49,7 +50,7 @@ const ProtectedScreens = () => {
                     }
                     return <Icon name={iconName} size={size} color={color} />;
                 },
-                tabBarBackground: () => (
+                tabBarBackground: () =>
                     Platform.OS === 'ios' ? (
                         <BlurView
                             style={StyleSheet.absoluteFill}
@@ -58,18 +59,22 @@ const ProtectedScreens = () => {
                             reducedTransparencyFallbackColor="white"
                         />
                     ) : (
-                        <View style={{ flex: 1, backgroundColor: 'rgba(255, 255, 255, 0.8)',}} />
-                    )
-                ),
+                        <View style={{ flex: 1, backgroundColor: 'rgba(255, 255, 255, 0.8)' }} />
+                    ),
             })}
         >
             {protectedScreens.map((screen, idx) => (
                 <Tab.Screen
                     name={screen.name}
-                    component={screen.component}
-                    options={screen.options}
                     key={idx}
-                />
+                    options={screen.options}
+                >
+                    {props => (
+                        <AuthProtected>
+                            <screen.component {...props} />
+                        </AuthProtected>
+                    )}
+                </Tab.Screen>
             ))}
         </Tab.Navigator>
     );
