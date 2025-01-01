@@ -14,6 +14,9 @@ export const refresh = (data: any) => {
     return backend_api_helper.post(URL.REFRESH, data);
 }
 
+export const validate = (data: any) => {
+    return backend_api_helper.post(URL.VALIDATE, data);
+}
 export const getUsers = () => {
     return backend_api_helper.get(URL.GET_USERS);
 }
