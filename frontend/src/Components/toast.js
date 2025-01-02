@@ -8,6 +8,7 @@ const showToast = (type, text1, text2) => {
         text2: text2 || '',
         position: 'top',
         topOffset: Platform.OS === 'ios' ? 100 : 60,
+        zIndex: 9999,
     });
 };
 

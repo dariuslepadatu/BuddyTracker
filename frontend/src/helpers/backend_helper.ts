@@ -21,6 +21,9 @@ export const getUsers = () => {
 }
 
 export const getGroups = (data: any) => {
-
     return backend_api_helper.post(URL.GET_GROUPS, data);
+}
+
+export const createGroup = (data: any) => {
+    return backend_api_helper.post(URL.SET_GROUP, data);
 }
