@@ -22,7 +22,7 @@ const RegisterScreen = () => {
             if (!accessToken) {
                 throw new Error('No access token found');
             }
-            validate({'access_token': accessToken})
+            validate()
                 .then(() => {
                     navigation.navigate('Protected', {screen: 'Groups'})
                 })

@@ -21,10 +21,11 @@ const LoginScreen = () => {
                 if (!accessToken) {
                     throw new Error('No access token found');
                 }
-                validate({'access_token': accessToken})
+                validate()
                     .then(() => {
                         navigation.navigate('Protected', {screen: 'Groups'})
                     })
+
             };
             checkAuth();
         }, [])
@@ -49,6 +50,7 @@ const LoginScreen = () => {
             .then(async (response) => {
                 await AsyncStorage.setItem('accessToken', response.access_token);
                 await AsyncStorage.setItem('refreshToken', response.refresh_token);
+                console.log(response)
                 navigation.navigate('Protected', { screen: 'Groups' });
             })
             .catch((error) => {

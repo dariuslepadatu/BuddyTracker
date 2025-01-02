@@ -85,7 +85,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#fff',
         flex: 1,
         padding: 20,
-        justifyContent: 'center',
+        // justifyContent: 'center',
         alignItems: 'center',
     },
     title: {
@@ -97,7 +97,7 @@ const styles = StyleSheet.create({
     },
     surface: {
         padding: 15,
-        marginVertical: 5,
+        marginVertical: 10,
         borderRadius: 8,
     },
     infoLabel: {

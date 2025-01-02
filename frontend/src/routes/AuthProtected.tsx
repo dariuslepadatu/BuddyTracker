@@ -18,7 +18,7 @@ const AuthProtected = ({ children }) => {
                 if (!accessToken) {
                     throw new Error('No access token found');
                 }
-                validate({'access_token': accessToken})
+                validate()
                     .then(() => {
                         setIsAuthenticated(true);
                         setLoading(false);

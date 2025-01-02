@@ -9,11 +9,20 @@ const api = axios.create({
     },
 });
 
-AsyncStorage.getItem('accessToken').then((accessToken) => {
-    if (accessToken) {
-        api.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
+
+api.interceptors.request.use(
+    async (config) => {
+        const accessToken = await AsyncStorage.getItem('accessToken');
+        if (accessToken) {
+            config.headers['Authorization'] = `bearer ${accessToken}`;
+        }
+        return config;
+    },
+    (error) => {
+        return Promise.reject(error);
     }
-});
+);
+
 
 
 api.interceptors.response.use(
@@ -42,8 +51,10 @@ api.interceptors.response.use(
 
                         return axios(originalRequest);
                     })
-                    .catch(error => {
+                    .catch(async error => {
                         console.error('Error refreshing token:', error);
+                        await AsyncStorage.removeItem('accessToken');
+                        await AsyncStorage.removeItem('refreshToken');
                     });
 
             }
