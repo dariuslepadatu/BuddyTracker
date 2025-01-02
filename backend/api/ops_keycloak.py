@@ -33,12 +33,10 @@ def token_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         auth_header = request.headers.get('Authorization')
-
         if not auth_header:
             return jsonify({'error': 'Authorization header is missing'}), 401
 
         parts = auth_header.split()
-
         if len(parts) != 2 or parts[0].lower() != 'bearer':
             return jsonify({'error': 'Authorization header must be in Bearer <token> format'}), 401
 
@@ -49,10 +47,8 @@ def token_required(f):
             'client_id': app.config['KEYCLOAK_CLIENT_ID'],
             'client_secret': app.config['KEYCLOAK_CLIENT_SECRET']
         }
-
         try:
             response = requests.post(app.config['INTROSPECT_URL'], data=payload)
-
             if response.status_code == 200:
                 introspection_data = response.json()
                 if introspection_data.get('active'):
@@ -159,9 +155,17 @@ def login():
 
 @ops_keycloak.route('/validate', methods=['POST'])
 def validate():
-    token = get_safe(request, 'access_token')
-    if not token:
-        return jsonify({'error': 'Missing parameters'}), 400
+    auth_header = request.headers.get('Authorization')
+
+    if not auth_header:
+        return jsonify({'error': 'Authorization header is missing'}), 401
+
+    parts = auth_header.split()
+
+    if len(parts) != 2 or parts[0].lower() != 'bearer':
+        return jsonify({'error': 'Authorization header must be in Bearer <token> format'}), 401
+
+    token = parts[1]
 
     # Request payload
     payload = {
@@ -240,53 +244,3 @@ def get_users():
             return jsonify({'error': 'Failed to fetch users from Keycloak', 'details': response.json()}), response.status_code
     except Exception as e:
         return jsonify({'error': f'Error: {str(e)}'}), 500
-
-
-@ops_keycloak.route('/get_user_info', methods=['GET'])
-@token_required
-def get_user_info():
-    auth_header = request.headers.get('Authorization')
-
-    if not auth_header:
-        return jsonify({'error': 'Authorization header is missing'}), 401
-
-    parts = auth_header.split()
-
-    if len(parts) != 2 or parts[0].lower() != 'bearer':
-        return jsonify({'error': 'Authorization header must be in Bearer <token> format'}), 401
-
-    token = parts[1]
-
-    headers = {
-        'Authorization': f'Bearer {token}',
-        'Content-Type': 'application/json'
-    }
-    user_info_url = f"{app.config['KEYCLOAK_URL']}/realms/local/protocol/openid-connect/userinfo"
-
-    print("URL:", user_info_url)
-    print("Headers:", headers)
-
-    try:
-        response = requests.get(user_info_url, headers=headers)
-        print("Status Code:", response.status_code)
-
-        try:
-            user_info = response.json()
-        except ValueError as e:
-            print("Error parsing JSON:", e)
-            return jsonify({'error': 'Failed to parse JSON response from Keycloak', 'details': response.text}), 500
-
-        if response.status_code == 200:
-            filtered_info = {
-                'name': user_info.get('name'),
-                'preferred_username': user_info.get('preferred_username'),
-                'given_name': user_info.get('given_name'),
-                'family_name': user_info.get('family_name'),
-                'email': user_info.get('email')
-            }
-            return jsonify(filtered_info), 200
-        else:
-            return jsonify({'error': 'Failed to fetch user info from Keycloak', 'details': user_info}), response.status_code
-    except requests.RequestException as e:
-        print("Request Exception:", e)
-        return jsonify({'error': 'Error communicating with Keycloak', 'details': str(e)}), 500
