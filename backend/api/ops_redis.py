@@ -74,7 +74,7 @@ def set_location():
     stored_value = json.loads(app.redis.get(redis_key))
 
     if stored_value != redis_value:
-        return jsonify({"message": f"Error setting location for user {user_id}"}), 500
+        return jsonify({"error": f"Error setting location for user {user_id}"}), 500
     # TODO Oli: broadcast the update of the location to all users
     #  that are connected to the server and are in the same group as the user_id
     # ========================= TODO =========================
@@ -116,11 +116,11 @@ def get_group_locations():
     pass
 
 
-# TODO Darius: check if user_id is valid using token_required decorator
 @ops_redis.route('/set_group', methods=['POST'])
+@token_required
 def set_group():
     # creates group (key: "group:{group_id}" value: {"invited": [], "members": []})
-    user_id = get_safe(request, 'user_id')
+    user_id = request.user_id
     group_id = get_safe(request, 'group_id')
 
     if not user_id or not group_id:
@@ -137,12 +137,12 @@ def set_group():
     redis_key   = f"group_id:{group_id}"
     redis_value = {"invited": invited, "members": members}
     if app.redis.get(redis_key):
-        return jsonify({"message": f"Group with id {group_id} already exists"}), 404
+        return jsonify({"error": f"Group with id {group_id} already exists"}), 404
 
     app.redis.set(redis_key, json.dumps(redis_value))
     
     if app.redis.get(redis_key) != json.dumps(redis_value):
-        return jsonify({"message": f"Error set_group for {user_id}"}), 500
+        return jsonify({"error": f"Error set_group for {user_id}"}), 500
 
     # Add group_id to user groups
     user_groups_key = f"user_groups:{user_id}"
