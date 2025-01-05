@@ -47,6 +47,8 @@ const ProtectedScreens = () => {
                         iconName = 'user';
                     } else if (route.name === 'Groups') {
                         iconName = 'group';
+                    } else if (route.name === 'Chat') {
+                        iconName = 'envelope-o';
                     }
                     return <Icon name={iconName} size={size} color={color} />;
                 },
