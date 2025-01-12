@@ -414,12 +414,12 @@ def delete_member_from_group():
 
     return jsonify({"message": f"User {user_id} removed from group {group_id}!"}), 200
     
-# TODO Darius: check if user_id is valid using token_required decorator
 @ops_redis.route('/send_message_to_group', methods=['POST'])
+@token_required
 def send_message_to_group():
     # Updates list of messages in group_chat (key: "group_chat:{group_id}" value: [{"timestamp": ..., "user_id": ..., "message": ...}, ...])
     group_id = get_safe(request, 'group_id')
-    user_id = get_safe(request, 'user_id')
+    user_id = request.user_id
     message = get_safe(request, 'message')
 
     if not user_id or not group_id or not message:
@@ -470,12 +470,13 @@ def send_message_to_group():
 
     return jsonify({"message": "Message sent successfully!"}), 200
 
-# TODO Darius: check if user_id is valid using token_required decorator
 @ops_redis.route('/get_messages_from_group', methods=['POST'])
+@token_required
 def get_messages_from_group():
     # Gets list of messages in group_chat (key: "group_chat:{group_id}" value: [{"timestamp": ..., "user_id": ..., "message": ...}, ...])
     group_id = get_safe(request, 'group_id')
     user_id = get_safe(request, 'user_id')
+    user_id = request.user_id
 
     if not user_id or not group_id:
         return jsonify({"error": "Not enough arguments!"}), 500
