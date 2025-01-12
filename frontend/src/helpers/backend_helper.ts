@@ -24,12 +24,13 @@ export const getGroups = (data: any) => {
     return backend_api_helper.post(URL.GET_GROUPS, data);
 }
 
+export const getInvitations = (data: any) => {
+    return backend_api_helper.post(URL.GET_INVITATIONS, data);
+}
+
 export const createGroup = (data: any) => {
     return backend_api_helper.post(URL.SET_GROUP, data);
 }
-
-/////////
-
 
 export const getMessages = (data: { groupName: string }) => {
     return backend_api_helper.post(URL.GET_MESSAGES, data);
