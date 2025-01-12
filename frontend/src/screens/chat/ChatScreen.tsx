@@ -9,35 +9,57 @@ const ChatScreen = ({route}) => {
     const { group } = route.params;
     const [messages, setMessages] = useState([]);
     const [userInfo, setUserInfo] = useState({});
-    const [currentUser, setCurrentUser] = useState("darius");
     const [newMessage, setNewMessage] = useState('');
-    const flatListRef = useRef(null); // Creează referința pentru FlatList
+    const flatListRef = useRef(null);
 
     useFocusEffect(
         useCallback(() => {
             const fetchMessages = async () => {
                 try {
-                    const fetchedMessages = await getMessages({ "user_id":currentUser, "group_id":group }); // Obține mesajele grupului
-                    setMessages(fetchedMessages.messages); // Setează mesajele primite
+                    const fetchedMessages = await getMessages({ "group_id":group });
+                    setMessages(fetchedMessages.messages);
                 } catch (error) {
                     console.error('Error fetching messages:', error);
                 }
             };
             fetchMessages();
-        }, [group]) // Se apelează de fiecare dată când se schimbă `group`
+        }, [group])
     );
 
+
+    useFocusEffect(
+        React.useCallback(() => {
+            const printUserDetails = async () => {
+                const accessToken = await AsyncStorage.getItem('accessToken');
+                try {
+                    const payloadBase64 = accessToken.split('.')[1];
+                    const payload = JSON.parse(atob(payloadBase64));
+                    setUserInfo({
+                        name: payload.name,
+                        username: payload.preferred_username,
+                        first_name: payload.given_name,
+                        last_name: payload.family_name,
+                        email: payload.email,
+                    });
+                } catch (error) {
+                    console.error('Error decoding token:', error);
+                }
+            };
+            printUserDetails();
+        }, [])
+    );
+    
     const sendMessage = async () => {
         if (newMessage.trim()) {
             const newMsg = {
                 group_id: group,
-                user_id: currentUser,
+                user_id: userInfo.username,
                 message: newMessage,
             };
             try {
                 await sendMessageToServer(newMsg); // Trimite mesajul către server
                 let msgToSave = {
-                    user_id: currentUser,
+                    user_id: userInfo.username,
                     message: newMessage,
                     timestamp: new Date().toISOString(),
                 }
@@ -56,18 +78,18 @@ const ChatScreen = ({route}) => {
     };
 
     const renderMessage = ({ item }) => {
-        const isCurrentUser = item.user_id === currentUser;
+        const isCurrentUser = item.user_id === userInfo.username;
 
         return (
-            <Surface style={[styles.surface, isCurrentUser ? styles.currentUserSurface : styles.otherUserSurface]}>
-                <View style={[styles.messageContainer, isCurrentUser ? styles.currentUserMessageContainer : styles.otherUserMessageContainer]}>
-                    <Text style={[styles.userName, isCurrentUser ? styles.currentUserText : styles.otherUserText]}>
+            <Surface style={[styles.surface, isCurrentUser ? styles.usernameSurface : styles.otherUserSurface]}>
+                <View style={[styles.messageContainer, isCurrentUser ? styles.usernameMessageContainer : styles.otherUserMessageContainer]}>
+                    <Text style={[styles.userName, isCurrentUser ? styles.usernameText : styles.otherUserText]}>
                         {item.user_id}
                     </Text>
-                    <Text style={[styles.messageText, isCurrentUser ? styles.currentUserText : styles.otherUserText]}>
+                    <Text style={[styles.messageText, isCurrentUser ? styles.usernameText : styles.otherUserText]}>
                         {item.message}
                     </Text>
-                    <Text style={[styles.timestamp, isCurrentUser ? styles.currentUserText : styles.otherUserText]}>
+                    <Text style={[styles.timestamp, isCurrentUser ? styles.usernameText : styles.otherUserText]}>
                         {new Date(item.timestamp).toLocaleString()}
                     </Text>
                 </View>
@@ -137,7 +159,7 @@ const styles = StyleSheet.create({
         marginHorizontal: 16,
         alignSelf: 'flex-start', // Default: mesajele sunt aliniate la stânga
     },
-    currentUserSurface: {
+    usernameSurface: {
         backgroundColor: '#e0e0e0',
         alignSelf: 'flex-end', // Mesajele utilizatorului curent la dreapta
     },
@@ -149,7 +171,7 @@ const styles = StyleSheet.create({
         flexDirection: 'column',
         width: '100%',
     },
-    currentUserMessageContainer: {
+    usernameMessageContainer: {
         alignItems: 'flex-end', // Tot textul este aliniat complet la dreapta
     },
     otherUserMessageContainer: {
