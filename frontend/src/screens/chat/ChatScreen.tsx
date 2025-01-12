@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useRef } from 'react'; // Importă useRef
 import { SafeAreaView, StyleSheet, View, FlatList, Button, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard, TextInput } from 'react-native';
 import { Surface, Text } from 'react-native-paper';
 import { useFocusEffect } from '@react-navigation/native';
@@ -11,6 +11,7 @@ const ChatScreen = () => {
     const [groupName, setGroupName] = useState("Prietenii");
     const [currentUser, setCurrentUser] = useState("alexiastfn");
     const [newMessage, setNewMessage] = useState('');
+    const flatListRef = useRef(null); // Creează referința pentru FlatList
 
     useFocusEffect(
         useCallback(() => {
@@ -44,6 +45,11 @@ const ChatScreen = () => {
                 setMessages([...messages, msgToSave]);
                 setNewMessage('');
                 Keyboard.dismiss();
+
+                // Scroll automat la ultimul mesaj
+                setTimeout(() => {
+                    flatListRef.current?.scrollToEnd({ animated: true });
+                }, 100);
             } catch (error) {
                 console.error('Error sending message:', error);
             }
@@ -81,12 +87,13 @@ const ChatScreen = () => {
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 style={styles.keyboardAvoidingView}
             >
-
                 <FlatList
+                    ref={flatListRef} // Atribuie referința la FlatList
                     data={messages}
                     keyExtractor={(item, index) => index.toString()}
                     renderItem={renderMessage}
                     contentContainerStyle={styles.listContainer}
+                    onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })} // Scroll la încărcare
                 />
 
                 <View style={styles.inputContainer}>
