@@ -471,7 +471,7 @@ def send_message_to_group():
     return jsonify({"message": "Message sent successfully!"}), 200
 
 # TODO Darius: check if user_id is valid using token_required decorator
-@ops_redis.route('/get_messages_from_group', methods=['GET'])
+@ops_redis.route('/get_messages_from_group', methods=['POST'])
 def get_messages_from_group():
     # Gets list of messages in group_chat (key: "group_chat:{group_id}" value: [{"timestamp": ..., "user_id": ..., "message": ...}, ...])
     group_id = get_safe(request, 'group_id')
