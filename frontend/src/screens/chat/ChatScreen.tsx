@@ -1,76 +1,46 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { SafeAreaView, StyleSheet, View, FlatList, TextInput, Button, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { SafeAreaView, StyleSheet, View, FlatList, Button, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard, TextInput } from 'react-native';
 import { Surface, Text } from 'react-native-paper';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getMessages, sendMessageToServer } from '../../helpers/backend_helper.ts'; // Importă funcțiile de backend
 
 const ChatScreen = () => {
-    const [messages, setMessages] = useState([
-        {
-            timestamp: '2025-01-05T12:57:03.862941',
-            user_id: 'darius',
-            message: 'salut',
-        },
-        {
-            timestamp: '2025-01-05T12:57:11.113971',
-            user_id: 'alex',
-            message: 'hei',
-        },
-        {
-            timestamp: '2025-01-05T12:57:15.983219',
-            user_id: 'darius',
-            message: 'bagam meci de fotbal?',
-        },
-        {
-            timestamp: '2025-01-05T12:59:11.113971',
-            user_id: 'adi',
-            message: 'nu frate',
-        },
-        {
-            timestamp: '2025-01-05T12:59:40.983219',
-            user_id: 'darius',
-            message: 'urat ',
-        },
-    ]);
-
+    const [messages, setMessages] = useState([]);
     const [userInfo, setUserInfo] = useState({});
-    const [groupName, setGroupName] = useState("Prietenii"); // Setezi numele grupului
-    const [currentUser, setCurrentUser] = useState("darius");
-    const [newMessage, setNewMessage] = useState(''); // Câmpul pentru mesajul nou
+    const [groupName, setGroupName] = useState("Prietenii");
+    const [currentUser, setCurrentUser] = useState("alexiastfn");
+    const [newMessage, setNewMessage] = useState('');
 
     useFocusEffect(
         useCallback(() => {
-            const printUserDetails = async () => {
-                const accessToken = await AsyncStorage.getItem('accessToken');
+            const fetchMessages = async () => {
                 try {
-                    const payloadBase64 = accessToken.split('.')[1];
-                    const payload = JSON.parse(atob(payloadBase64));
-                    setUserInfo({
-                        name: payload.name,
-                        username: payload.preferred_username,
-                        first_name: payload.given_name,
-                        last_name: payload.family_name,
-                        email: payload.email,
-                    });
+                    const fetchedMessages = await getMessages({ "user_id":currentUser, "group_id":groupName }); // Obține mesajele grupului
+                    setMessages(fetchedMessages); // Setează mesajele primite
                 } catch (error) {
-                    console.error('Error decoding token:', error);
+                    console.error('Error fetching messages:', error);
                 }
             };
-            printUserDetails();
-        }, [])
+            fetchMessages();
+        }, [groupName]) // Se apelează de fiecare dată când se schimbă `groupName`
     );
 
-    // Funcție pentru trimiterea unui mesaj
-    const sendMessage = () => {
+    const sendMessage = async () => {
         if (newMessage.trim()) {
             const newMsg = {
                 timestamp: new Date().toISOString(),
                 user_id: currentUser,
                 message: newMessage,
             };
-            setMessages([...messages, newMsg]);
-            setNewMessage(''); // Resetează câmpul de text după trimitere
-            Keyboard.dismiss(); // Închide tastatura
+            try {
+                await sendMessageToServer(newMsg); // Trimite mesajul către server
+                setMessages([...messages, newMsg]); // Actualizează local lista de mesaje
+                setNewMessage('');
+                Keyboard.dismiss();
+            } catch (error) {
+                console.error('Error sending message:', error);
+            }
         }
     };
 
@@ -97,7 +67,7 @@ const ChatScreen = () => {
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
-                <Text style={styles.groupName}>{groupName}</Text> {/* Afișează numele grupului */}
+                {/*<Text style={styles.groupName}>{groupName}</Text> /!* Afișează numele grupului *!/*/}
             </View>
 
             {/* Folosim KeyboardAvoidingView pentru a evita suprapunerea tastaturii */}
@@ -217,7 +187,6 @@ const styles = StyleSheet.create({
         paddingLeft: 10,
         marginRight: 10,
         fontSize: 16,
-        // position: 'absolute',
         height: 35,
         marginBottom: 50,
     },

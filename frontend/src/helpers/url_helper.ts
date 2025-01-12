@@ -5,3 +5,5 @@ export const VALIDATE = '/identity/validate';
 export const GET_USERS = '/identity/get_users';
 export const GET_GROUPS = '/db/get_groups';
 export const SET_GROUP = '/db/set_group';
+export const GET_MESSAGES = '/db/get_messages_from_group';
+export const SEND_MESSAGE = '/db/send_message_to_group';
