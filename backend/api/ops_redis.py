@@ -190,7 +190,6 @@ def get_groups():
     # Gets list of groups the user is a member of
     user_id = request.user_id
     search_query = get_safe(request, 'search_query')
-    print(user_id, search_query)
     if not user_id:
         return jsonify({'error': 'Missing parameters'}), 400
 
@@ -208,6 +207,30 @@ def get_groups():
         groups = [group for group in groups if group.lower().startswith(search_query)]
 
     return jsonify({"groups": groups}), 200
+
+@ops_redis.route('/get_invitations', methods=['POST'])
+@token_required
+def get_invitations():
+    # Gets list of groups the user is a member of
+    user_id = request.user_id
+    search_query = get_safe(request, 'search_query')
+    if not user_id:
+        return jsonify({'error': 'Missing parameters'}), 400
+
+    user_groups_key = f"user_groups:{user_id}"
+    user_data = app.redis.get(user_groups_key)
+
+    if not user_data:
+        return jsonify({"invitations": []}), 200
+
+    user_data = json.loads(user_data)
+    invitations = user_data.get("invitations", [])
+
+    if search_query and search_query != '':
+        search_query = search_query.lower()
+        invitations = [invite for invite in invitations if invite.lower().startswith(search_query)]
+
+    return jsonify({"invitations": invitations}), 200
 
 
 # TODO Darius: check if user_id is valid using token_required decorator
