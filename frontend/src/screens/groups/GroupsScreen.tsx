@@ -6,7 +6,6 @@ import { getGroups, createGroup } from "../../helpers/backend_helper.ts";
 import { Text, Surface, Searchbar, IconButton } from "react-native-paper";
 import CreateGroupDialog from "./dialog/CreateGroupDialog.tsx";
 import ToastHelper from "../../Components/toast";
-import Toast from "react-native-toast-message";
 
 const GroupsScreen = () => {
     const tabBarHeight = useBottomTabBarHeight();

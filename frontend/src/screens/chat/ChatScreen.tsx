@@ -8,8 +8,8 @@ import { getMessages, sendMessageToServer } from '../../helpers/backend_helper.t
 const ChatScreen = () => {
     const [messages, setMessages] = useState([]);
     const [userInfo, setUserInfo] = useState({});
-    const [groupName, setGroupName] = useState("Prietenii");
-    const [currentUser, setCurrentUser] = useState("alexiastfn");
+    const [groupName, setGroupName] = useState("ILuvOnePiece");
+    const [currentUser, setCurrentUser] = useState("darius");
     const [newMessage, setNewMessage] = useState('');
 
     useFocusEffect(
@@ -17,7 +17,8 @@ const ChatScreen = () => {
             const fetchMessages = async () => {
                 try {
                     const fetchedMessages = await getMessages({ "user_id":currentUser, "group_id":groupName }); // Obține mesajele grupului
-                    setMessages(fetchedMessages); // Setează mesajele primite
+                    console.log("MESSAGES:", fetchedMessages);
+                    setMessages(fetchedMessages.messages); // Setează mesajele primite
                 } catch (error) {
                     console.error('Error fetching messages:', error);
                 }
@@ -29,13 +30,18 @@ const ChatScreen = () => {
     const sendMessage = async () => {
         if (newMessage.trim()) {
             const newMsg = {
-                timestamp: new Date().toISOString(),
+                group_id: groupName,
                 user_id: currentUser,
                 message: newMessage,
             };
             try {
                 await sendMessageToServer(newMsg); // Trimite mesajul către server
-                setMessages([...messages, newMsg]); // Actualizează local lista de mesaje
+                let msgToSave = {
+                    user_id: currentUser,
+                    message: newMessage,
+                    timestamp: new Date().toISOString(),
+                }
+                setMessages([...messages, msgToSave]);
                 setNewMessage('');
                 Keyboard.dismiss();
             } catch (error) {
@@ -67,7 +73,7 @@ const ChatScreen = () => {
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
-                {/*<Text style={styles.groupName}>{groupName}</Text> /!* Afișează numele grupului *!/*/}
+                <Text style={styles.groupName}>{groupName}</Text>
             </View>
 
             {/* Folosim KeyboardAvoidingView pentru a evita suprapunerea tastaturii */}
@@ -75,6 +81,7 @@ const ChatScreen = () => {
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 style={styles.keyboardAvoidingView}
             >
+
                 <FlatList
                     data={messages}
                     keyExtractor={(item, index) => index.toString()}
