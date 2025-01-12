@@ -28,6 +28,15 @@ export const getInvitations = (data: any) => {
     return backend_api_helper.post(URL.GET_INVITATIONS, data);
 }
 
+
+export const acceptInvitation = (data: any) => {
+    return backend_api_helper.post(URL.ACCEPT_INVITATION, data);
+}
+
+export const deleteInvitation = (data: any) => {
+    return backend_api_helper.post(URL.DELETE_INVITATION, data);
+}
+
 export const createGroup = (data: any) => {
     return backend_api_helper.post(URL.SET_GROUP, data);
 }

@@ -3,8 +3,11 @@ import { ActivityIndicator, SafeAreaView, ScrollView, StyleSheet, View } from 'r
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useFocusEffect } from "@react-navigation/native";
-import {getGroups, getInvitations} from "../../helpers/backend_helper.ts";
+import {acceptInvitation, deleteInvitation, getGroups, getInvitations} from "../../helpers/backend_helper.ts";
 import {Text, Surface, Searchbar, IconButton} from "react-native-paper";
+import Icon from 'react-native-vector-icons/FontAwesome';
+import ToastHelper from "../../Components/toast";
+import Toast from "react-native-toast-message";
 
 
 const InvitesScreen = ({ navigation }) => {
@@ -38,9 +41,34 @@ const InvitesScreen = ({ navigation }) => {
         };
     }, [searchQuery]);
 
+    const handleAcceptInvitation = (group_id) => {
+        console.log(group_id)
+        acceptInvitation({group_id: group_id})
+            .then((response) => {
+                let newInvitations = [...invitations];
+                newInvitations.splice(invitations.indexOf(group_id), 1);
+                setInvitations(newInvitations);
+            })
+            .catch((error) => {
+                ToastHelper.error("Accept invitation failed", error);
+            });
+    }
 
+
+    const handleDeleteInvitation = (group_id) => {
+        deleteInvitation({group_id: group_id})
+            .then((response) => {
+                let newInvitations = [...invitations];
+                newInvitations.splice(invitations.indexOf(group_id), 1);
+                setInvitations(newInvitations);
+            })
+            .catch((error) => {
+                ToastHelper.error("Accept invitation failed", error);
+            });
+    }
     return (
         <SafeAreaView style={styles.container}>
+            <Toast/>
             <View style={styles.searchRow}>
                 <Searchbar
                     style={styles.searchbar}
@@ -65,10 +93,17 @@ const InvitesScreen = ({ navigation }) => {
                                 style={styles.surface}
                                 elevation={4}
                             >
-                                <Text style={styles.groupText}>
-                                    {group}
-                                </Text>
+                                <View style={styles.row}>
+                                    <Text style={styles.groupText}>
+                                        {group}
+                                    </Text>
+                                    <View style={styles.iconContainer}>
+                                        <Icon name="check" size={30} color="green" style={styles.icon} onPress={() => handleAcceptInvitation(group)}/>
+                                        <Icon name="close" size={30} color="red" style={styles.icon} onPress={() => handleDeleteInvitation(group)}/>
+                                    </View>
+                                </View>
                             </Surface>
+
                         ))
                     ) : (
                         <View style={styles.emptyContainer}>
@@ -110,10 +145,25 @@ const styles = StyleSheet.create({
         padding: 15,
         marginVertical: 10,
         borderRadius: 8,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+    },
+    row: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        flex: 1,
     },
     groupText: {
-        fontSize: 16,
-        margin: 10,
+        fontSize: 18,
+        flex: 1,
+    },
+    iconContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    icon: {
+        marginLeft: 15,
     },
     emptyContainer: {
         flex: 1,
@@ -130,5 +180,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
 });
+
+
 
 export default InvitesScreen;
