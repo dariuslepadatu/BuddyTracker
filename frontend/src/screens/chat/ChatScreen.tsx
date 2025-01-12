@@ -8,8 +8,8 @@ import { getMessages, sendMessageToServer } from '../../helpers/backend_helper.t
 const ChatScreen = () => {
     const [messages, setMessages] = useState([]);
     const [userInfo, setUserInfo] = useState({});
-    const [groupName, setGroupName] = useState("ILuvOnePiece");
-    const [currentUser, setCurrentUser] = useState("darius");
+    const [groupName, setGroupName] = useState("Prietenii");
+    const [currentUser, setCurrentUser] = useState("alexiastfn");
     const [newMessage, setNewMessage] = useState('');
 
     useFocusEffect(
@@ -130,50 +130,45 @@ const styles = StyleSheet.create({
         marginBottom: 16,
         padding: 12,
         borderRadius: 8,
-        backgroundColor: '#dcb2fd',
         maxWidth: '80%',
         marginHorizontal: 16,
-        shadowOpacity: 0,  // Elimină umbra globală pentru a nu provoca probleme de separare
+        alignSelf: 'flex-start', // Default: mesajele sunt aliniate la stânga
     },
     currentUserSurface: {
         backgroundColor: '#e0e0e0',
-        elevation: 0, // Adăugăm doar umbra pentru mesajele utilizatorului curent
+        alignSelf: 'flex-end', // Mesajele utilizatorului curent la dreapta
     },
     otherUserSurface: {
         backgroundColor: '#ffffff',
-        elevation: 0, // Fără umbră pentru ceilalți utilizatori
+        alignSelf: 'flex-start', // Mesajele altor utilizatori la stânga
     },
     messageContainer: {
         flexDirection: 'column',
-        width: '100%',  // Asigurăm că containerul are lățimea completă
+        width: '100%',
     },
     currentUserMessageContainer: {
-        alignItems: 'flex-end', // Mesajele utilizatorului curent vor fi aliniate la dreapta
+        alignItems: 'flex-end', // Tot textul este aliniat complet la dreapta
     },
     otherUserMessageContainer: {
-        alignItems: 'flex-start', // Mesajele celorlalți utilizatori vor fi aliniate la stânga
+        alignItems: 'flex-start', // Textul celorlalți utilizatori la stânga
     },
     userName: {
         fontWeight: 'bold',
         fontSize: 16,
         marginBottom: 4,
         color: '#6200ee',
+        textAlign: 'right', // Aliniere la dreapta pentru utilizatorul curent
     },
     messageText: {
         fontSize: 14,
         color: '#333333',
         marginBottom: 8,
+        textAlign: 'right', // Aliniere la dreapta pentru mesaj
     },
     timestamp: {
         fontSize: 12,
         color: '#888888',
-        textAlign: 'right',
-    },
-    currentUserText: {
-        textAlign: 'right', // Textul utilizatorului curent va fi aliniat la dreapta
-    },
-    otherUserText: {
-        textAlign: 'left', // Textul celorlalți utilizatori va fi aliniat la stânga
+        textAlign: 'right', // Aliniere la dreapta pentru timestamp
     },
     keyboardAvoidingView: {
         flex: 1,
@@ -194,9 +189,10 @@ const styles = StyleSheet.create({
         paddingLeft: 10,
         marginRight: 10,
         fontSize: 16,
-        height: 35,
-        marginBottom: 50,
+        height: 50,
+        marginBottom: 50
     },
 });
+
 
 export default ChatScreen;
