@@ -4,9 +4,10 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useFocusEffect } from "@react-navigation/native";
 import { getGroups } from "../../helpers/backend_helper.ts";
-import { Text, Surface, Searchbar } from "react-native-paper";
+import {Text, Surface, Searchbar, IconButton} from "react-native-paper";
 import ChatScreen from "../chat/ChatScreen.tsx";
 import Icon from "react-native-vector-icons/FontAwesome";
+import CreateGroupDialog from "./dialog/CreateGroupDialog.tsx";
 
 const Stack = createNativeStackNavigator();
 
@@ -15,6 +16,7 @@ const GroupsListScreen = ({ navigation }) => {
     const [groups, setGroups] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [isLoading, setIsLoading] = useState(false); // Stare pentru loader
+    const [showCreateGroupDialog, setShowCreateGroupDialog] = useState(false);
 
     useFocusEffect(
         useCallback(() => {
@@ -41,6 +43,15 @@ const GroupsListScreen = ({ navigation }) => {
         };
     }, [searchQuery]);
 
+    const toggleHideCreateGroupDialog = () => {
+        setShowCreateGroupDialog(!showCreateGroupDialog);
+    };
+
+    const handleCreateGroup = (name) => {
+        const newGroups = [...groups, name];
+        setGroups(newGroups);
+    };
+
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.searchRow}>
@@ -51,6 +62,11 @@ const GroupsListScreen = ({ navigation }) => {
                     value={searchQuery}
                     clearIcon="close"
                     onClearIconPress={() => setSearchQuery('')}
+                />
+                <IconButton
+                    icon="plus-circle-outline"
+                    size={25}
+                    onPress={() => setShowCreateGroupDialog(true)}
                 />
             </View>
             {isLoading ? (
@@ -78,6 +94,9 @@ const GroupsListScreen = ({ navigation }) => {
                         </View>
                     )}
                 </ScrollView>
+            )}
+            {showCreateGroupDialog && (
+                <CreateGroupDialog hide={toggleHideCreateGroupDialog} handleCreateGroup={handleCreateGroup} />
             )}
         </SafeAreaView>
     );
