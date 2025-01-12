@@ -1,12 +1,16 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, SafeAreaView, ScrollView, StyleSheet, View } from 'react-native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useFocusEffect } from "@react-navigation/native";
 import { getGroups } from "../../helpers/backend_helper.ts";
 import { Text, Surface, Searchbar } from "react-native-paper";
-import Icon from 'react-native-vector-icons/FontAwesome';
+import ChatScreen from "../chat/ChatScreen.tsx";
+import Icon from "react-native-vector-icons/FontAwesome";
 
-const GroupsScreen = () => {
+const Stack = createNativeStackNavigator();
+
+const GroupsListScreen = ({ navigation }) => {
     const tabBarHeight = useBottomTabBarHeight();
     const [groups, setGroups] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
@@ -48,8 +52,6 @@ const GroupsScreen = () => {
                     clearIcon="close"
                     onClearIconPress={() => setSearchQuery('')}
                 />
-
-                <Icon name="plus-square-o" size={25} style={styles.icon} />
             </View>
             {isLoading ? (
                 <View style={styles.loaderContainer}>
@@ -59,7 +61,12 @@ const GroupsScreen = () => {
                 <ScrollView contentContainerStyle={[styles.scrollview, { paddingBottom: tabBarHeight }]}>
                     {groups.length > 0 ? (
                         groups.map((group, idx) => (
-                            <Surface key={idx} style={styles.surface} elevation={4}>
+                            <Surface
+                                key={idx}
+                                style={styles.surface}
+                                elevation={4}
+                                onTouchEnd={() => navigation.navigate('Chat', { group })}
+                            >
                                 <Text style={styles.groupText}>
                                     {group}
                                 </Text>
@@ -76,18 +83,62 @@ const GroupsScreen = () => {
     );
 };
 
+const GroupsScreen = () => {
+    return (
+        <Stack.Navigator>
+            <Stack.Screen
+                name="GroupsList"
+                component={GroupsListScreen}
+                options={{ title: 'Groups', headerShown: false }}
+            />
+            <Stack.Screen
+                name="Chat"
+                component={ChatScreen}
+                options={({ route, navigation }) => ({
+                    title: route.params.group || 'Chat',
+                    headerRight: () => (
+                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                            <Icon
+                                name="info-circle"
+                                size={20}
+                                color="#C03BDE"
+                                style={{ marginRight: 15 }}
+                                onPress={() => {
+                                    // Deschide informații suplimentare despre grup
+                                    navigation.navigate('GroupInfo', { group: route.params.group });
+                                }}
+                            />
+                            <Icon
+                                name="bell"
+                                size={20}
+                                color="#C03BDE"
+                                onPress={() => {
+                                    // Activează/dezactivează notificările
+                                    console.log('Notification toggled');
+                                }}
+                            />
+                        </View>
+                    ),
+                    headerLeft: () => (
+                        <Icon
+                            name="arrow-left"
+                            size={20}
+                            color="#C03BDE"
+                            style={{ marginLeft: 15 }}
+                            onPress={() => navigation.goBack()}
+                        />
+                    ),
+                })}
+            />
+
+        </Stack.Navigator>
+    );
+};
+
 const styles = StyleSheet.create({
     container: {
         backgroundColor: '#fff',
         flex: 1,
-    },
-    headerContainer: {
-        alignItems: 'center',
-        marginBottom: 20,
-    },
-    title: {
-        fontSize: 24,
-        fontWeight: 'bold',
     },
     searchRow: {
         flexDirection: 'row',
@@ -99,9 +150,6 @@ const styles = StyleSheet.create({
     searchbar: {
         flex: 1,
         marginRight: 10,
-    },
-    icon: {
-        color: '#000',
     },
     scrollview: {
         flexGrow: 1,

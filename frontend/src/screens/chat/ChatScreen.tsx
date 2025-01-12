@@ -5,11 +5,11 @@ import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getMessages, sendMessageToServer } from '../../helpers/backend_helper.ts'; // Importă funcțiile de backend
 
-const ChatScreen = () => {
+const ChatScreen = ({route}) => {
+    const { group } = route.params;
     const [messages, setMessages] = useState([]);
     const [userInfo, setUserInfo] = useState({});
-    const [groupName, setGroupName] = useState("Prietenii");
-    const [currentUser, setCurrentUser] = useState("alexiastfn");
+    const [currentUser, setCurrentUser] = useState("darius");
     const [newMessage, setNewMessage] = useState('');
     const flatListRef = useRef(null); // Creează referința pentru FlatList
 
@@ -17,21 +17,20 @@ const ChatScreen = () => {
         useCallback(() => {
             const fetchMessages = async () => {
                 try {
-                    const fetchedMessages = await getMessages({ "user_id":currentUser, "group_id":groupName }); // Obține mesajele grupului
-                    console.log("MESSAGES:", fetchedMessages);
+                    const fetchedMessages = await getMessages({ "user_id":currentUser, "group_id":group }); // Obține mesajele grupului
                     setMessages(fetchedMessages.messages); // Setează mesajele primite
                 } catch (error) {
                     console.error('Error fetching messages:', error);
                 }
             };
             fetchMessages();
-        }, [groupName]) // Se apelează de fiecare dată când se schimbă `groupName`
+        }, [group]) // Se apelează de fiecare dată când se schimbă `group`
     );
 
     const sendMessage = async () => {
         if (newMessage.trim()) {
             const newMsg = {
-                group_id: groupName,
+                group_id: group,
                 user_id: currentUser,
                 message: newMessage,
             };
@@ -78,9 +77,6 @@ const ChatScreen = () => {
 
     return (
         <SafeAreaView style={styles.container}>
-            <View style={styles.header}>
-                <Text style={styles.groupName}>{groupName}</Text>
-            </View>
 
             {/* Folosim KeyboardAvoidingView pentru a evita suprapunerea tastaturii */}
             <KeyboardAvoidingView
@@ -124,7 +120,7 @@ const styles = StyleSheet.create({
         borderBottomWidth: 1,
         borderBottomColor: '#ddd',
     },
-    groupName: {
+    group: {
         fontWeight: 'bold',
         fontSize: 24,
         color: '#ffffff',
