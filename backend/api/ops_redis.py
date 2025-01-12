@@ -285,13 +285,13 @@ def invite_to_group():
 
     return jsonify({"message": f"User {invited_user_id} invited to group {group_id}"}), 200
 
-# TODO Darius: check if user_id is valid using token_required decorator
 @ops_redis.route('/accept_invitation_to_group', methods=['POST'])
+@token_required
 def accept_invitation_to_group():
     # updates invited list and members list in group (key: "group:{group_id}" value: {"invited": [], "members": []})
     # updates invitations and groups  in user groups (key: "user_groups:{user_id}" value: {"invitations": [], "groups": []})
     group_id = get_safe(request, 'group_id')
-    user_id = get_safe(request, 'user_id')
+    user_id = request.user_id
 
     if not user_id or not group_id:
         return jsonify({"error": "Not enough arguments!"}), 500
@@ -299,7 +299,6 @@ def accept_invitation_to_group():
     # First check whether the group exists or not
     group_key  = f"group_id:{group_id}"
     group_data = app.redis.get(group_key)
-
     if not group_data:
         return jsonify({"error": f"No group with id/name {group_id}!"}), 404
 
@@ -331,12 +330,13 @@ def accept_invitation_to_group():
     return jsonify({"message": f"User {user_id} accepted in to group {group_id}"}), 200
 
 # TODO Darius: check if user_id is valid using token_required decorator
-@ops_redis.route('/delete_invitation_from_group', methods=['DELETE'])
+@ops_redis.route('/delete_invitation_from_group', methods=['POST'])
+@token_required
 def delete_invitation_from_group():
     # updates invited list in group (key: "group:{group_id}" value: {"invited": [], "members": []})
     # updates invitations in user groups (key: "user_groups:{user_id}" value: {"invitations": [], "groups": []})
     group_id = get_safe(request, 'group_id')
-    user_id = get_safe(request, 'user_id')
+    user_id = request.user_id
 
     if not user_id or not group_id:
         return jsonify({"error": "Not enough arguments!"}), 500
