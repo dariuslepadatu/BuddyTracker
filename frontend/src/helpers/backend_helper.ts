@@ -20,6 +20,10 @@ export const getUsers = () => {
     return backend_api_helper.get(URL.GET_USERS);
 }
 
+export const getGroup = (data: any) => {
+    return backend_api_helper.post(URL.GET_GROUP, data);
+}
+
 export const getGroups = (data: any) => {
     return backend_api_helper.post(URL.GET_GROUPS, data);
 }

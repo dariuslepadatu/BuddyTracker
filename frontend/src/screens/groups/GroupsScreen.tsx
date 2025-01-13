@@ -8,6 +8,7 @@ import {Text, Surface, Searchbar, IconButton} from "react-native-paper";
 import ChatScreen from "./chat/ChatScreen.tsx";
 import Icon from "react-native-vector-icons/FontAwesome";
 import CreateGroupDialog from "./dialog/CreateGroupDialog.tsx";
+import GroupInfoScreen from "./groupInfo/GroupInfoScreen.tsx";
 
 const Stack = createNativeStackNavigator();
 
@@ -124,20 +125,35 @@ const GroupsScreen = () => {
                                 style={{ marginRight: 15 }}
                                 onPress={() => {
                                     // Deschide informații suplimentare despre grup
-                                    navigation.navigate('GroupInfo', { group: route.params.group });
+                                    navigation.navigate('GroupInfoScreen', { group: route.params.group });
                                 }}
                             />
                             <Icon
-                                name="bell"
+                                name="map"
                                 size={20}
                                 color="#C03BDE"
                                 onPress={() => {
-                                    // Activează/dezactivează notificările
-                                    console.log('Notification toggled');
+                                    // console.log('Notification toggled');
                                 }}
                             />
                         </View>
                     ),
+                    headerLeft: () => (
+                        <Icon
+                            name="arrow-left"
+                            size={20}
+                            color="#C03BDE"
+                            style={{ marginLeft: 15 }}
+                            onPress={() => navigation.goBack()}
+                        />
+                    ),
+                })}
+            />
+            <Stack.Screen
+                name="GroupInfoScreen"
+                component={GroupInfoScreen}
+                options={({ route, navigation }) => ({
+                    title: `${route.params.group} Info`,
                     headerLeft: () => (
                         <Icon
                             name="arrow-left"

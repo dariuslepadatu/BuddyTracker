@@ -3,6 +3,7 @@ export const REGISTER = '/identity/register';
 export const REFRESH = '/identity/refresh';
 export const VALIDATE = '/identity/validate';
 export const GET_USERS = '/identity/get_users';
+export const GET_GROUP = '/db/get_group';
 export const GET_GROUPS = '/db/get_groups';
 export const GET_INVITATIONS = '/db/get_invitations';
 export const ACCEPT_INVITATION = '/db/accept_invitation_to_group';
