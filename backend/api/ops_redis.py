@@ -2,6 +2,7 @@ import json
 
 from datetime import datetime as dt
 
+import requests
 from flask import Blueprint, jsonify, request, current_app as app
 
 from api.ops_keycloak import token_required
@@ -232,21 +233,37 @@ def get_invitations():
     return jsonify({"invitations": invitations}), 200
 
 
-# TODO Darius: check if user_id is valid using token_required decorator
 @ops_redis.route('/invite_to_group', methods=['POST'])
+@token_required
 def invite_to_group():
     # updates invited list in group (key: "group:{group_id}" value: {"invited": [], "members": []})
     # updates invitations  in user groups (key: "user_groups:{invited_user_id}" value: {"invitations": [], "groups": []})
     group_id = get_safe(request, 'group_id')
-    user_id = get_safe(request, 'user_id')
-    # TODO Darius: check if invited_user_id exists in Keycloak's database
+    user_id = request.user_id
     invited_user_id = get_safe(request, 'invited_user_id')
 
     if not user_id or not group_id or not invited_user_id:
         return jsonify({"error": "Not enough arguments!"}), 500
 
+    try:
+        response = requests.get(
+            f"{request.host_url}identity/get_users",
+            headers={'Authorization': request.headers.get('Authorization')}
+        )
+        if response.status_code == 200:
+            usernames = response.json()
+            if invited_user_id not in usernames:
+                return jsonify({"error": f"User {invited_user_id} does not exist in the database"}), 404
+        else:
+            return jsonify({
+                "error": "Failed to verify user existence in Keycloak",
+                "details": response.json()
+            }), response.status_code
+    except Exception as e:
+        return jsonify({"error": f"Error calling Keycloak endpoint: {str(e)}"}), 500
+
     if user_id == invited_user_id:
-        return jsonify({"error": "The user cannot invited himself!"}), 400
+        return jsonify({"error": "The user cannot invite himself!"}), 400
 
     # First check whether the group exists or not
     group_key  = f"group_id:{group_id}"
@@ -372,13 +389,13 @@ def delete_invitation_from_group():
 
     return jsonify({"message": f"User {user_id} invition to group {group_id} removed!"}), 200
 
-# TODO Darius: check if user_id is valid using token_required decorator
-@ops_redis.route('/delete_member_from_group', methods=['DELETE'])
+@ops_redis.route('/delete_member_from_group', methods=['POST'])
+@token_required
 def delete_member_from_group():
     # updates members list in group (key: "group:{group_id}" value: {"invited": [], "members": []})
     # updates groups in user groups (key: "user_groups:{user_id}" value: {"invitations": [], "groups": []})
     group_id = get_safe(request, 'group_id')
-    user_id = get_safe(request, 'user_id')
+    user_id = request.user_id
 
     if not user_id or not group_id:
         return jsonify({"error": "Not enough arrguments!"}), 500
