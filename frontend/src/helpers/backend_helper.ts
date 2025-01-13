@@ -62,6 +62,10 @@ export const sendMessageToServer = (data: { timestamp: string; user_id: string; 
     return backend_api_helper.post(URL.SEND_MESSAGE, data);
 };
 
-export const setLocation = (data: { groupName: string }) => {
+export const setLocation = (data: any) => {
     return backend_api_helper.post(URL.SET_LOCATION, data);
+};
+
+export const getGroupLocations = (data: any) => {
+    return backend_api_helper.post(URL.GET_GROUP_LOCATIONS, data);
 };

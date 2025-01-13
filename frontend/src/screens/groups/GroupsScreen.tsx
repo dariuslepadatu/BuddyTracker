@@ -20,6 +20,7 @@ import GroupInfoScreen from "./groupInfo/GroupInfoScreen.tsx";
 import Geolocation from "react-native-geolocation-service";
 import ToastHelper from "../../Components/toast";
 import Toast from "react-native-toast-message";
+import MapScreen from "./map/MapScreen.tsx";
 
 const Stack = createNativeStackNavigator();
 
@@ -161,7 +162,6 @@ const GroupsScreen = () => {
                                 color="#C03BDE"
                                 style={{ marginRight: 15 }}
                                 onPress={() => {
-                                    // Deschide informații suplimentare despre grup
                                     navigation.navigate('GroupInfoScreen', { group: route.params.group });
                                 }}
                             />
@@ -170,7 +170,7 @@ const GroupsScreen = () => {
                                 size={20}
                                 color="#C03BDE"
                                 onPress={() => {
-                                    // console.log('Notification toggled');
+                                    navigation.navigate('MapScreen', { group: route.params.group });
                                 }}
                             />
                         </View>
@@ -202,7 +202,22 @@ const GroupsScreen = () => {
                     ),
                 })}
             />
-
+            <Stack.Screen
+                name="MapScreen"
+                component={MapScreen}
+                options={({ route, navigation }) => ({
+                    title: `${route.params.group} Map`,
+                    headerLeft: () => (
+                        <Icon
+                            name="arrow-left"
+                            size={20}
+                            color="#C03BDE"
+                            style={{ marginLeft: 15 }}
+                            onPress={() => navigation.goBack()}
+                        />
+                    ),
+                })}
+            />
         </Stack.Navigator>
     );
 };
