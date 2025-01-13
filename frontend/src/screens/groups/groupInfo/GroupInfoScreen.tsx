@@ -1,31 +1,28 @@
 import React, { useCallback, useState, useRef } from 'react'; // Importă useRef
 import {
-  SafeAreaView,
-  StyleSheet,
-  View,
-  FlatList,
-  Button,
-  KeyboardAvoidingView,
-  Platform,
-  TouchableWithoutFeedback,
-  Keyboard,
-  TextInput,
-  ScrollView,
+    SafeAreaView,
+    StyleSheet,
+    ScrollView, TouchableOpacity, Button, View,
 } from 'react-native';
 import {List, Surface, Text} from 'react-native-paper';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {getGroup, getMessages, sendMessageToServer} from '../../../helpers/backend_helper.ts';
 import { decode as base64Decode } from 'base-64';
 import ToastHelper from "../../../Components/toast";
 import Toast from "react-native-toast-message";
 import {useBottomTabBarHeight} from "@react-navigation/bottom-tabs";
+import InviteToGroupDialog from "../dialog/InviteToGroupDialog.tsx";
+import ExitGroupDialog from "../dialog/ExitGroupDialog.tsx";
 
-const ChatScreen = ({route}) => {
+const GroupInfoScreen = ({route}) => {
     const { group } = route.params;
     const [userInfo, setUserInfo] = useState({});
     const [invited, setInvited] = useState([]);
     const [members, setMembers] = useState([]);
+    const [showInviteToGroupDialog, setShowInviteToGroupDialog] = useState(false);
+    const navigation = useNavigation();
+    const [showExitGroupDialog, setShowExitGroupDialog] = useState(false);
     const tabBarHeight = useBottomTabBarHeight();
 
     useFocusEffect(
@@ -72,13 +69,27 @@ const ChatScreen = ({route}) => {
         }, [])
     );
 
+    const toggleHideInviteToGroupDialog = () => {
+        setShowInviteToGroupDialog(!showInviteToGroupDialog);
+    };
 
+    const handleInviteToGroup = (userToInvite) => {
+        const newInvited = [...invited, userToInvite];
+        setInvited(newInvited);
+    };
+
+    const toggleHideExitGroupDialog = () => {
+        setShowExitGroupDialog(!showExitGroupDialog);
+    };
+
+    const handleExitGroup = () => {
+        navigation.navigate('GroupsList');
+    };
 
     return (
         <SafeAreaView style={styles.container}>
             <Toast/>
             <ScrollView contentContainerStyle={[styles.scrollview, { paddingBottom: tabBarHeight }]}>
-                <Text>HELLO {group}</Text>
                 <List.AccordionGroup>
                     <List.Accordion title="Members" id="1">
                         {members.map((member, index) => (
@@ -104,7 +115,29 @@ const ChatScreen = ({route}) => {
                     </List.Accordion>
                 </List.AccordionGroup>
 
+
             </ScrollView>
+            <View style={{ paddingBottom: tabBarHeight }}>
+
+            <Button title="Invite someone to group" onPress={() => setShowInviteToGroupDialog(true)}  />
+            <Button title="Exit group" onPress={() => setShowExitGroupDialog(true)} color='#FF0000' />
+            </View>
+            {
+                showInviteToGroupDialog &&
+                <InviteToGroupDialog
+                    group={group}
+                    hide={toggleHideInviteToGroupDialog}
+                    handleInviteToGroup={handleInviteToGroup}
+                />
+            }
+            {
+                showExitGroupDialog &&
+                <ExitGroupDialog
+                    group={group}
+                    hide={toggleHideExitGroupDialog}
+                    handleExitGroup={handleExitGroup}
+                />
+            }
         </SafeAreaView>
     );
 };
@@ -214,4 +247,4 @@ const styles = StyleSheet.create({
     },
 });
 
-export default ChatScreen;
+export default GroupInfoScreen;

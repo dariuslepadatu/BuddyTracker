@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, SafeAreaView, ScrollView, StyleSheet, View } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
-import { useFocusEffect } from "@react-navigation/native";
+import {useFocusEffect, useNavigation} from "@react-navigation/native";
 import { getGroups } from "../../helpers/backend_helper.ts";
 import {Text, Surface, Searchbar, IconButton} from "react-native-paper";
 import ChatScreen from "./chat/ChatScreen.tsx";
@@ -12,12 +12,13 @@ import GroupInfoScreen from "./groupInfo/GroupInfoScreen.tsx";
 
 const Stack = createNativeStackNavigator();
 
-const GroupsListScreen = ({ navigation }) => {
+const GroupsListScreen = () => {
     const tabBarHeight = useBottomTabBarHeight();
     const [groups, setGroups] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [isLoading, setIsLoading] = useState(false); // Stare pentru loader
     const [showCreateGroupDialog, setShowCreateGroupDialog] = useState(false);
+    const navigation = useNavigation();
 
     useFocusEffect(
         useCallback(() => {
