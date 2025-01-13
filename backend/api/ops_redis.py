@@ -58,12 +58,11 @@ def delete_sid():
         return jsonify({"error": f"Failed to delete session ID for user {user_id}"}), 500
     return jsonify({"message": f"Session ID for user {user_id} has been deleted."}), 200
 
-# TODO Darius: change endpoint into socket event
-# TODO Darius: check if user_id is valid using token_required decorator
 @ops_redis.route('/set_location', methods=['POST'])
+@token_required
 def set_location():
     # updates user location (key: "location:{user_id}" value: {"latitude": "", "longitude:""})
-    user_id = get_safe(request, 'user_id')
+    user_id = request.user_id
     latitude = get_safe(request, 'latitude')
     longitude = get_safe(request, 'longitude')
 
@@ -76,18 +75,6 @@ def set_location():
 
     if stored_value != redis_value:
         return jsonify({"error": f"Error setting location for user {user_id}"}), 500
-    # TODO Oli: broadcast the update of the location to all users
-    #  that are connected to the server and are in the same group as the user_id
-    # ========================= TODO =========================
-    # for group_id in get_groups(user_id):
-    #     for obj in get_group_sids(user_id, group_id):
-    #         sid = obj["sid"]
-    #         if sid != get_sid(user_id):
-    #             emit('user_location_in_group_update',
-    #                  { 'group_id': group_id,
-    #                          'user_id': user_id,
-    #                          "latitude": latitude,
-    #                          "longitude": longitude}, to=sid)
     return jsonify({"message": f"Location updated for user {user_id}"}), 200
 
 
@@ -108,13 +95,34 @@ def get_location():
 
     return jsonify({"latitude": location_data["latitude"], "longitude": location_data["longitude"]}), 200
 
-@ops_redis.route('/get_group_locations', methods=['GET'])
+@ops_redis.route('/get_group_locations', methods=['POST'])
+@token_required
 def get_group_locations():
-    # TODO Oli: return a list of locations for all members from the group (except the location of the user)
     # return value is [{'user_id': 'olivian', 'latitude' : 4324423, 'longitude' : 312312}, .... ]
-    user_id = get_safe(request, 'user_id')
+    user_id = request.user_id
     group_id = get_safe(request, 'group_id')
-    pass
+
+    if not user_id or not group_id:
+        return jsonify({"error": "Missing parameters"}), 400
+
+    redis_key = f"group_id:{group_id}"
+    group = app.redis.get(redis_key)
+
+    if not group:
+        return jsonify({"error": f"No group for {group_id}!"}), 404
+
+    group = json.loads(group)
+    if not user_id in group['members']:
+        return jsonify({"error": f"User {user_id} is not a member of {group_id}!"}), 400
+
+    result = []
+    for member in group['members']:
+        redis_key = f"location:{member}"
+        location = app.redis.get(redis_key)
+        if location:
+            location = json.loads(location)
+            result.append({"user_id": member, "latitude": location["latitude"], "longitude": location["longitude"]})
+    return jsonify(result), 200
 
 
 @ops_redis.route('/set_group', methods=['POST'])
@@ -345,7 +353,6 @@ def accept_invitation_to_group():
     
     return jsonify({"message": f"User {user_id} accepted in to group {group_id}"}), 200
 
-# TODO Darius: check if user_id is valid using token_required decorator
 @ops_redis.route('/delete_invitation_from_group', methods=['POST'])
 @token_required
 def delete_invitation_from_group():
