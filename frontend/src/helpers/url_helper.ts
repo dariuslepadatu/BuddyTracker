@@ -13,3 +13,4 @@ export const DELETE_INVITATION = '/db/delete_invitation_from_group';
 export const SET_GROUP = '/db/set_group';
 export const GET_MESSAGES = '/db/get_messages_from_group';
 export const SEND_MESSAGE = '/db/send_message_to_group';
+export const SET_LOCATION = '/db/set_location';

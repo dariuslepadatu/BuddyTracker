@@ -1,14 +1,25 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, SafeAreaView, ScrollView, StyleSheet, View } from 'react-native';
+import {
+    ActivityIndicator,
+    PermissionsAndroid,
+    Platform,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    View
+} from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import {useFocusEffect, useNavigation} from "@react-navigation/native";
-import { getGroups } from "../../helpers/backend_helper.ts";
+import {getGroups, setLocation} from "../../helpers/backend_helper.ts";
 import {Text, Surface, Searchbar, IconButton} from "react-native-paper";
 import ChatScreen from "./chat/ChatScreen.tsx";
 import Icon from "react-native-vector-icons/FontAwesome";
 import CreateGroupDialog from "./dialog/CreateGroupDialog.tsx";
 import GroupInfoScreen from "./groupInfo/GroupInfoScreen.tsx";
+import Geolocation from "react-native-geolocation-service";
+import ToastHelper from "../../Components/toast";
+import Toast from "react-native-toast-message";
 
 const Stack = createNativeStackNavigator();
 
@@ -19,6 +30,30 @@ const GroupsListScreen = () => {
     const [isLoading, setIsLoading] = useState(false); // Stare pentru loader
     const [showCreateGroupDialog, setShowCreateGroupDialog] = useState(false);
     const navigation = useNavigation();
+
+
+
+    useFocusEffect(
+        useCallback(() => {
+            const fetchLocation = () => {
+                Geolocation.getCurrentPosition(
+                    (position) => {
+                        setLocation({latitude: position.coords.latitude, longitude: position.coords.longitude});
+                        console.log('Geolocation position', position);
+                    },
+                    (error) => {
+                        // setLocationError(error.message);
+                        ToastHelper.error('Geolocation position error', error);
+                    },
+                    { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
+                );
+            };
+            fetchLocation();
+
+        }, [])
+    );
+
+
 
     useFocusEffect(
         useCallback(() => {
@@ -56,6 +91,7 @@ const GroupsListScreen = () => {
 
     return (
         <SafeAreaView style={styles.container}>
+            <Toast/>
             <View style={styles.searchRow}>
                 <Searchbar
                     style={styles.searchbar}
