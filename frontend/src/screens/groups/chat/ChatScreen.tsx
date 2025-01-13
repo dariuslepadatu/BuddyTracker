@@ -3,7 +3,8 @@ import { SafeAreaView, StyleSheet, View, FlatList, Button, KeyboardAvoidingView,
 import { Surface, Text } from 'react-native-paper';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getMessages, sendMessageToServer } from '../../helpers/backend_helper.ts'; // Importă funcțiile de backend
+import { getMessages, sendMessageToServer } from '../../../helpers/backend_helper.ts';
+import { decode as base64Decode } from 'base-64';
 
 const ChatScreen = ({route}) => {
     const { group } = route.params;
@@ -31,9 +32,18 @@ const ChatScreen = ({route}) => {
         React.useCallback(() => {
             const printUserDetails = async () => {
                 const accessToken = await AsyncStorage.getItem('accessToken');
+                if (!accessToken) {
+                    console.error('Access token is missing');
+                    return;
+                }
+
                 try {
+                    // Split the token to get the payload
                     const payloadBase64 = accessToken.split('.')[1];
-                    const payload = JSON.parse(atob(payloadBase64));
+                    const base64 = payloadBase64.replace(/-/g, '+').replace(/_/g, '/');
+                    const paddedBase64 = base64.padEnd(base64.length + (4 - (base64.length % 4)) % 4, '=');
+                    const payload = JSON.parse(base64Decode(paddedBase64));
+
                     setUserInfo({
                         name: payload.name,
                         username: payload.preferred_username,

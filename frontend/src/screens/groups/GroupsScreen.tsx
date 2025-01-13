@@ -5,7 +5,7 @@ import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useFocusEffect } from "@react-navigation/native";
 import { getGroups } from "../../helpers/backend_helper.ts";
 import {Text, Surface, Searchbar, IconButton} from "react-native-paper";
-import ChatScreen from "../chat/ChatScreen.tsx";
+import ChatScreen from "./chat/ChatScreen.tsx";
 import Icon from "react-native-vector-icons/FontAwesome";
 import CreateGroupDialog from "./dialog/CreateGroupDialog.tsx";
 

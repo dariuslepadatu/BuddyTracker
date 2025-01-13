@@ -4,6 +4,7 @@ import { Surface, Text } from 'react-native-paper';
 import {useFocusEffect, useNavigation} from '@react-navigation/native';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import LogoutDialog from "./dialog/LogoutDialog.tsx";
+import { decode as base64Decode } from 'base-64';
 
 const ProfileScreen = () => {
     const navigation = useNavigation();
@@ -14,9 +15,18 @@ const ProfileScreen = () => {
         React.useCallback(() => {
             const printUserDetails = async () => {
                 const accessToken = await AsyncStorage.getItem('accessToken');
+                if (!accessToken) {
+                    console.error('Access token is missing');
+                    return;
+                }
+
                 try {
+                    // Split the token to get the payload
                     const payloadBase64 = accessToken.split('.')[1];
-                    const payload = JSON.parse(atob(payloadBase64));
+                    const base64 = payloadBase64.replace(/-/g, '+').replace(/_/g, '/');
+                    const paddedBase64 = base64.padEnd(base64.length + (4 - (base64.length % 4)) % 4, '=');
+                    const payload = JSON.parse(base64Decode(paddedBase64));
+
                     setUserInfo({
                         name: payload.name,
                         username: payload.preferred_username,
