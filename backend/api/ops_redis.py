@@ -161,13 +161,12 @@ def set_group():
 
     return jsonify({"message": f"Group {group_id} created by user {user_id}"}), 200
 
-# TODO Darius: check if user_id is valid using token_required decorator
-@ops_redis.route('/get_group', methods=['GET'])
+@ops_redis.route('/get_group', methods=['POST'])
+@token_required
 def get_group():
     # gets group invited list and members list (key: "group:{group_id}" value: {"invited": [], "members": []})
     group_id = get_safe(request, 'group_id')
-    user_id  = get_safe(request, 'user_id')
-
+    user_id = request.user_id
     if not group_id:
         return jsonify({"error": "Not enough arguments!"}), 400
 
