@@ -125,53 +125,59 @@ const MapScreen = ({ route }) => {
                         container: "viewDiv",
                         map: map,
                         center: center,
-                        zoom: 10
+                        zoom: 10,
+                        constraints: {
+                            // Impiedică mișcarea hărții în afacerea limitei
+                            rotationEnabled: false, // Blochează rotația hărții
+                            tiltEnabled: false, // Blochează înclinarea hărții
+                        },
+                        minZoom: 6, // Setează zoom-ul minim
+                        maxZoom: 16 // Setează zoom-ul maxim
                     });
 
                     locations.forEach(loc => {
                         const point = {
-                        type: "point",
-                        longitude: loc.longitude,
-                        latitude: loc.latitude
-                    };
+                            type: "point",
+                            longitude: loc.longitude,
+                            latitude: loc.latitude
+                        };
 
-                    const markerSymbol = {
-                        type: "simple-marker",
-                        color: loc.user_id === "${userInfo.username}" ? "#00FF00" : "#FF0000", // Verde pentru utilizator curent, roșu pentru ceilalți
-                        size: "20px", // Dimensiune mai mare pentru a imita "Find My"
-                        outline: {
-                            color: "white", // Margine albă
-                            width: 2 // Grosime margine
-                        }
-                    };
+                        const markerSymbol = {
+                            type: "simple-marker",
+                            color: loc.user_id === "${userInfo.username}" ? "#00FF00" : "#FF0000", // Verde pentru utilizator curent, roșu pentru ceilalți
+                            size: "20px", // Dimensiune mai mare pentru a imita "Find My"
+                            outline: {
+                                color: "white", // Margine albă
+                                width: 2 // Grosime margine
+                            }
+                        };
                     
-                    const textSymbol = {
-                        type: "text",
-                        color: "black",
-                        haloColor: "white", // Contur alb pentru text
-                        haloSize: "2px",
-                        text: loc.user_id, 
-                        xoffset: 0,
-                        yoffset: -20, // Poziționează textul deasupra punctului
-                        font: {
-                            size: 12,
-                            family: "Arial, sans-serif",
-                            weight: "bold" // Text îngroșat pentru lizibilitate
-                        }
-                    };
+                        const textSymbol = {
+                            type: "text",
+                            color: "black",
+                            haloColor: "white", // Contur alb pentru text
+                            haloSize: "2px",
+                            text: loc.user_id, 
+                            xoffset: 0,
+                            yoffset: -20, // Poziționează textul deasupra punctului
+                            font: {
+                                size: 12,
+                                family: "Arial, sans-serif",
+                                weight: "bold" // Text îngroșat pentru lizibilitate
+                            }
+                        };
                     
-                    const markerGraphic = new Graphic({
-                        geometry: point,
-                        symbol: markerSymbol
-                    });
+                        const markerGraphic = new Graphic({
+                            geometry: point,
+                            symbol: markerSymbol
+                        });
                     
-                    const labelGraphic = new Graphic({
-                        geometry: point,
-                        symbol: textSymbol
-                    });
+                        const labelGraphic = new Graphic({
+                            geometry: point,
+                            symbol: textSymbol
+                        });
                     
-                    view.graphics.addMany([markerGraphic, labelGraphic]);
-
+                        view.graphics.addMany([markerGraphic, labelGraphic]);
                     });
 
                     document.getElementById("zoomIn").addEventListener("click", () => {
@@ -189,6 +195,8 @@ const MapScreen = ({ route }) => {
         </html>
     `;
     };
+
+
 
 
     if (!readyToRender) {
