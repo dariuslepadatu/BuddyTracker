@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import {SafeAreaView, StyleSheet, View} from 'react-native';
+import { SafeAreaView, StyleSheet, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { Text } from 'react-native-paper';
-import {useFocusEffect} from "@react-navigation/native";
-import {getGroupLocations} from "../../../helpers/backend_helper.ts";
+import { useFocusEffect } from "@react-navigation/native";
+import { getGroupLocations } from "../../../helpers/backend_helper.ts";
 import ToastHelper from "../../../Components/toast";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { decode as base64Decode } from 'base-64';
-
 
 const MapScreen = ({ route }) => {
     const { group } = route.params;
@@ -78,63 +77,37 @@ const MapScreen = ({ route }) => {
                     margin: 0;
                     height: 100%;
                     width: 100%;
-                    overflow: hidden; /* Previne derularea */
-                }
-                .zoom-controls {
-                    position: absolute;
-                    top: 10px;
-                    left: 10px;
-                    z-index: 100;
-                }
-                .zoom-controls button {
-                    padding: 10px;
-                    margin: 5px;
-                    background-color: #fff;
-                    border: 1px solid #ccc;
-                    border-radius: 4px;
-                    cursor: pointer;
-                }
-                .zoom-controls button:hover {
-                    background-color: #f0f0f0;
+                    overflow: hidden;
                 }
             </style>
         </head>
         <body>
             <div id="viewDiv"></div>
-            <div class="zoom-controls">
-                <button id="zoomIn">Zoom In</button>
-                <button id="zoomOut">Zoom Out</button>
-            </div>
             <script>
                 require([
                     "esri/Map",
                     "esri/views/MapView",
                     "esri/Graphic",
-                    "esri/config"
-                ], function(Map, MapView, Graphic, esriConfig) {
+                    "esri/config",
+                    "esri/rest/route",
+                    "esri/rest/support/RouteParameters",
+                    "esri/rest/support/FeatureSet"
+                ], function(Map, MapView, Graphic, esriConfig, route, RouteParameters, FeatureSet) {
+                    esriConfig.apiKey = "${apiKey}";
+
                     const map = new Map({
                         basemap: "topo-vector"
                     });
 
-                    const locations = ${JSON.stringify(groupLocations)};
-                    
-                    const userLocation = locations.find((loc) => loc.user_id === "${userInfo.username}");
-                    const center = userLocation ? [userLocation.longitude, userLocation.latitude] : [-118.2437, 34.0522];
-
                     const view = new MapView({
                         container: "viewDiv",
                         map: map,
-                        center: center,
-                        zoom: 10,
-                        constraints: {
-                            // Impiedică mișcarea hărții în afacerea limitei
-                            rotationEnabled: false, // Blochează rotația hărții
-                            tiltEnabled: false, // Blochează înclinarea hărții
-                        },
-                        minZoom: 6, // Setează zoom-ul minim
-                        maxZoom: 16 // Setează zoom-ul maxim
+                        center: [-118.2437, 34.0522],
+                        zoom: 10
                     });
 
+                    // Adaugă locații pe hartă
+                    const locations = ${JSON.stringify(groupLocations)};
                     locations.forEach(loc => {
                         const point = {
                             type: "point",
@@ -144,60 +117,85 @@ const MapScreen = ({ route }) => {
 
                         const markerSymbol = {
                             type: "simple-marker",
-                            color: loc.user_id === "${userInfo.username}" ? "#00FF00" : "#FF0000", // Verde pentru utilizator curent, roșu pentru ceilalți
-                            size: "20px", // Dimensiune mai mare pentru a imita "Find My"
-                            outline: {
-                                color: "white", // Margine albă
-                                width: 2 // Grosime margine
-                            }
+                            color: loc.user_id === "${userInfo.username}" ? "#00FF00" : "#FF0000",
+                            size: "20px",
+                            outline: { color: "white", width: 2 }
                         };
-                    
-                        const textSymbol = {
-                            type: "text",
-                            color: "black",
-                            haloColor: "white", // Contur alb pentru text
-                            haloSize: "2px",
-                            text: loc.user_id, 
-                            xoffset: 0,
-                            yoffset: -20, // Poziționează textul deasupra punctului
-                            font: {
-                                size: 12,
-                                family: "Arial, sans-serif",
-                                weight: "bold" // Text îngroșat pentru lizibilitate
-                            }
-                        };
-                    
-                        const markerGraphic = new Graphic({
+
+                        const graphic = new Graphic({
                             geometry: point,
                             symbol: markerSymbol
                         });
-                    
-                        const labelGraphic = new Graphic({
+
+                        view.graphics.add(graphic);
+                    });
+
+                    // Variabile pentru puncte selectate
+                    let selectedPoints = [];
+
+                    // Adaugă un eveniment de click pentru a selecta puncte
+                    view.on("click", (event) => {
+                        if (selectedPoints.length >= 2) {
+                            selectedPoints = [];
+                            view.graphics.removeAll();
+                        }
+
+                        const point = {
+                            type: "point",
+                            longitude: event.mapPoint.longitude,
+                            latitude: event.mapPoint.latitude
+                        };
+
+                        selectedPoints.push(point);
+
+                        const graphic = new Graphic({
                             geometry: point,
-                            symbol: textSymbol
+                            symbol: {
+                                type: "simple-marker",
+                                color: selectedPoints.length === 1 ? "blue" : "green",
+                                size: "12px"
+                            }
                         });
-                    
-                        view.graphics.addMany([markerGraphic, labelGraphic]);
+                        view.graphics.add(graphic);
+
+                        if (selectedPoints.length === 2) {
+                            getRoute(selectedPoints[0], selectedPoints[1]);
+                        }
                     });
 
-                    document.getElementById("zoomIn").addEventListener("click", () => {
-                        view.goTo({ zoom: view.zoom + 1 }, { duration: 500, easing: "ease-in-out" });
-                    });
+                    // Funcția pentru calcularea rutei
+                    function getRoute(start, end) {
+                        const routeUrl = "https://route-api.arcgis.com/arcgis/rest/services/World/Route/NAServer/Route_World";
 
-                    document.getElementById("zoomOut").addEventListener("click", () => {
-                        view.goTo({ zoom: view.zoom - 1 }, { duration: 500, easing: "ease-in-out" });
-                    });
+                        const routeParams = new RouteParameters({
+                            stops: new FeatureSet({
+                                features: [
+                                    new Graphic({ geometry: start }),
+                                    new Graphic({ geometry: end })
+                                ]
+                            }),
+                            returnDirections: true
+                        });
 
-                    esriConfig.apiKey = "${apiKey}";
+                        route.solve(routeUrl, routeParams).then((response) => {
+                            response.routeResults.forEach((result) => {
+                                result.route.symbol = {
+                                    type: "simple-line",
+                                    color: [0, 0, 255],
+                                    width: 3
+                                };
+                                view.graphics.add(result.route);
+                            });
+                        }).catch((error) => {
+                            console.error("Route calculation failed:", error);
+                        });
+                    }
                 });
             </script>
         </body>
         </html>
     `;
     };
-
-
-
 
     if (!readyToRender) {
         return (
@@ -209,9 +207,8 @@ const MapScreen = ({ route }) => {
 
     return (
         <SafeAreaView style={styles.container}>
-
             <WebView
-                key={`${JSON.stringify(groupLocations)}-${userInfo.username}`} // Force re-render on changes
+                key={`${JSON.stringify(groupLocations)}-${userInfo.username}`}
                 originWhitelist={['*']}
                 source={{ html: generateMapHtml() }}
                 scrollEnabled={false}
@@ -220,7 +217,6 @@ const MapScreen = ({ route }) => {
         </SafeAreaView>
     );
 };
-
 
 const styles = StyleSheet.create({
     container: {
