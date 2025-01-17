@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { SafeAreaView, StyleSheet, View } from 'react-native';
+import { SafeAreaView, StyleSheet } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { Text } from 'react-native-paper';
 import { useFocusEffect } from "@react-navigation/native";
@@ -79,20 +79,42 @@ const MapScreen = ({ route }) => {
                     width: 100%;
                     overflow: hidden;
                 }
+                .zoom-controls {
+                    position: absolute;
+                    top: 10px;
+                    left: 10px;
+                    z-index: 100;
+                }
+                .zoom-controls button {
+                    padding: 10px;
+                    margin: 5px;
+                    background-color: #fff;
+                    border: 1px solid #ccc;
+                    border-radius: 4px;
+                    cursor: pointer;
+                }
+                .zoom-controls button:hover {
+                    background-color: #f0f0f0;
+                }
             </style>
         </head>
         <body>
             <div id="viewDiv"></div>
+            <div class="zoom-controls">
+                <button id="zoomIn">Zoom In</button>
+                <button id="zoomOut">Zoom Out</button>
+            </div>
             <script>
                 require([
                     "esri/Map",
                     "esri/views/MapView",
                     "esri/Graphic",
-                    "esri/config",
+                    "esri/layers/GraphicsLayer",
                     "esri/rest/route",
                     "esri/rest/support/RouteParameters",
-                    "esri/rest/support/FeatureSet"
-                ], function(Map, MapView, Graphic, esriConfig, route, RouteParameters, FeatureSet) {
+                    "esri/rest/support/FeatureSet",
+                    "esri/config"
+                ], function(Map, MapView, Graphic, GraphicsLayer, route, RouteParameters, FeatureSet, esriConfig) {
                     esriConfig.apiKey = "${apiKey}";
 
                     const map = new Map({
@@ -102,12 +124,16 @@ const MapScreen = ({ route }) => {
                     const view = new MapView({
                         container: "viewDiv",
                         map: map,
-                        center: [-118.2437, 34.0522],
+                        center: [-118.2437, 34.0522], // Default center
                         zoom: 10
                     });
 
-                    // Adaugă locații pe hartă
+                    const graphicsLayer = new GraphicsLayer();
+                    map.add(graphicsLayer);
+
                     const locations = ${JSON.stringify(groupLocations)};
+                    
+                    // Add user locations to the map
                     locations.forEach(loc => {
                         const point = {
                             type: "point",
@@ -119,77 +145,119 @@ const MapScreen = ({ route }) => {
                             type: "simple-marker",
                             color: loc.user_id === "${userInfo.username}" ? "#00FF00" : "#FF0000",
                             size: "20px",
-                            outline: { color: "white", width: 2 }
+                            outline: {
+                                color: "white",
+                                width: 2
+                            }
                         };
 
-                        const graphic = new Graphic({
+                        const textSymbol = {
+                            type: "text",
+                            color: "black",
+                            haloColor: "white",
+                            haloSize: "2px",
+                            text: loc.user_id,
+                            xoffset: 0,
+                            yoffset: -20,
+                            font: {
+                                size: 12,
+                                family: "Arial, sans-serif",
+                                weight: "bold"
+                            }
+                        };
+
+                        const markerGraphic = new Graphic({
                             geometry: point,
                             symbol: markerSymbol
                         });
 
-                        view.graphics.add(graphic);
-                    });
-
-                    // Variabile pentru puncte selectate
-                    let selectedPoints = [];
-
-                    // Adaugă un eveniment de click pentru a selecta puncte
-                    view.on("click", (event) => {
-                        if (selectedPoints.length >= 2) {
-                            selectedPoints = [];
-                            view.graphics.removeAll();
-                        }
-
-                        const point = {
-                            type: "point",
-                            longitude: event.mapPoint.longitude,
-                            latitude: event.mapPoint.latitude
-                        };
-
-                        selectedPoints.push(point);
-
-                        const graphic = new Graphic({
+                        const labelGraphic = new Graphic({
                             geometry: point,
-                            symbol: {
-                                type: "simple-marker",
-                                color: selectedPoints.length === 1 ? "blue" : "green",
-                                size: "12px"
-                            }
+                            symbol: textSymbol
                         });
-                        view.graphics.add(graphic);
 
-                        if (selectedPoints.length === 2) {
-                            getRoute(selectedPoints[0], selectedPoints[1]);
+                        graphicsLayer.addMany([markerGraphic, labelGraphic]);
+                    });
+
+                    // Routing logic
+                    let startPoint, endPoint;
+                    view.on("click", (event) => {
+                        if (!startPoint) {
+                            startPoint = {
+                                type: "point",
+                                longitude: event.mapPoint.longitude,
+                                latitude: event.mapPoint.latitude
+                            };
+
+                            const startGraphic = new Graphic({
+                                geometry: startPoint,
+                                symbol: {
+                                    type: "simple-marker",
+                                    color: "blue",
+                                    size: "10px",
+                                    outline: {
+                                        color: "white",
+                                        width: 2
+                                    }
+                                }
+                            });
+                            graphicsLayer.add(startGraphic);
+                        } else if (!endPoint) {
+                            endPoint = {
+                                type: "point",
+                                longitude: event.mapPoint.longitude,
+                                latitude: event.mapPoint.latitude
+                            };
+
+                            const endGraphic = new Graphic({
+                                geometry: endPoint,
+                                symbol: {
+                                    type: "simple-marker",
+                                    color: "green",
+                                    size: "10px",
+                                    outline: {
+                                        color: "white",
+                                        width: 2
+                                    }
+                                }
+                            });
+                            graphicsLayer.add(endGraphic);
+
+                            const routeParams = new RouteParameters({
+                                stops: new FeatureSet({
+                                    features: [
+                                        new Graphic({ geometry: startPoint }),
+                                        new Graphic({ geometry: endPoint })
+                                    ]
+                                }),
+                                returnDirections: true
+                            });
+
+                            route.solve("https://route.arcgis.com/arcgis/rest/services/World/Route/NAServer/Route_World", routeParams)
+                                .then((data) => {
+                                    data.routeResults.forEach((result) => {
+                                        const routeGraphic = new Graphic({
+                                            geometry: result.route.geometry,
+                                            symbol: {
+                                                type: "simple-line",
+                                                color: "blue",
+                                                width: 4
+                                            }
+                                        });
+                                        graphicsLayer.add(routeGraphic);
+                                    });
+                                });
                         }
                     });
 
-                    // Funcția pentru calcularea rutei
-                    function getRoute(start, end) {
-                        const routeUrl = "https://route-api.arcgis.com/arcgis/rest/services/World/Route/NAServer/Route_World";
+                    // Zoom controls
+                    document.getElementById("zoomIn").addEventListener("click", () => {
+                        view.goTo({ zoom: view.zoom + 1 }, { duration: 500 });
+                    });
 
-                        const routeParams = new RouteParameters({
-                            stops: new FeatureSet({
-                                features: [
-                                    new Graphic({ geometry: start }),
-                                    new Graphic({ geometry: end })
-                                ]
-                            }),
-                            returnDirections: true
-                        });
-
-                        route.solve(routeUrl, routeParams).then((response) => {
-                            response.routeResults.forEach((result) => {
-                                result.route.symbol = {
-                                    type: "simple-line",
-                                    color: [0, 0, 255],
-                                    width: 3
-                                };
-                                view.graphics.add(result.route);
-                            });
-                        }).catch((error) => {
-                            console.error("Route calculation failed:", error);
-                        });
-                    }
+                    document.getElementById("zoomOut").addEventListener("click", () => {
+                        view.goTo({ zoom: view.zoom - 1 }, { duration: 500 });
+                    });
                 });
             </script>
         </body>
@@ -208,7 +276,7 @@ const MapScreen = ({ route }) => {
     return (
         <SafeAreaView style={styles.container}>
             <WebView
-                key={`${JSON.stringify(groupLocations)}-${userInfo.username}`}
+                key={`${JSON.stringify(groupLocations)}-${userInfo.username}`} // Force re-render on changes
                 originWhitelist={['*']}
                 source={{ html: generateMapHtml() }}
                 scrollEnabled={false}
