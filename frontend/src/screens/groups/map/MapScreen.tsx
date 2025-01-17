@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { SafeAreaView, StyleSheet } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { Text } from 'react-native-paper';
-import { useFocusEffect } from "@react-navigation/native";
-import { getGroupLocations } from "../../../helpers/backend_helper.ts";
-import ToastHelper from "../../../Components/toast";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useFocusEffect } from '@react-navigation/native';
+import { getGroupLocations } from '../../../helpers/backend_helper.ts';
+import ToastHelper from '../../../Components/toast';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { decode as base64Decode } from 'base-64';
 
 const MapScreen = ({ route }) => {
@@ -14,6 +14,8 @@ const MapScreen = ({ route }) => {
     const [apiKey, setApiKey] = useState('');
     const [userInfo, setUserInfo] = useState({});
     const [readyToRender, setReadyToRender] = useState(false);
+    const [selectedPoints, setSelectedPoints] = useState([]);
+    const webViewRef = useRef(null);
 
     // Fetch user info
     useFocusEffect(
@@ -64,6 +66,23 @@ const MapScreen = ({ route }) => {
         }
     }, [userInfo, groupLocations]);
 
+    // Handle map click to update selected points
+    const handleMapClick = (longitude, latitude) => {
+        setSelectedPoints((prevPoints) => {
+            const updatedPoints = [...prevPoints, { longitude, latitude }];
+            return updatedPoints.slice(-2); // Păstrează doar ultimele două puncte
+        });
+    };
+
+    // Update route in WebView when selected points change
+    useEffect(() => {
+        if (selectedPoints.length === 2 && webViewRef.current) {
+            webViewRef.current.injectJavaScript(`
+                window.updateRoute(${JSON.stringify(selectedPoints)});
+            `);
+        }
+    }, [selectedPoints]);
+
     const generateMapHtml = () => {
         return `
         <!DOCTYPE html>
@@ -109,154 +128,68 @@ const MapScreen = ({ route }) => {
                     "esri/Map",
                     "esri/views/MapView",
                     "esri/Graphic",
-                    "esri/layers/GraphicsLayer",
                     "esri/rest/route",
                     "esri/rest/support/RouteParameters",
                     "esri/rest/support/FeatureSet",
                     "esri/config"
-                ], function(Map, MapView, Graphic, GraphicsLayer, route, RouteParameters, FeatureSet, esriConfig) {
-                    esriConfig.apiKey = "${apiKey}";
-
-                    const map = new Map({
-                        basemap: "topo-vector"
-                    });
+                ], function(Map, MapView, Graphic, route, RouteParameters, FeatureSet, esriConfig) {
+                    const map = new Map({ basemap: "topo-vector" });
 
                     const view = new MapView({
                         container: "viewDiv",
                         map: map,
-                        center: [-118.2437, 34.0522], // Default center
-                        zoom: 10
+                        center: [-118.2437, 34.0522],
+                        zoom: 10,
                     });
 
-                    const graphicsLayer = new GraphicsLayer();
-                    map.add(graphicsLayer);
+                    esriConfig.apiKey = "${apiKey}";
 
                     const locations = ${JSON.stringify(groupLocations)};
-                    
-                    // Add user locations to the map
                     locations.forEach(loc => {
-                        const point = {
-                            type: "point",
-                            longitude: loc.longitude,
-                            latitude: loc.latitude
-                        };
-
+                        const point = { type: "point", longitude: loc.longitude, latitude: loc.latitude };
                         const markerSymbol = {
                             type: "simple-marker",
                             color: loc.user_id === "${userInfo.username}" ? "#00FF00" : "#FF0000",
                             size: "20px",
-                            outline: {
-                                color: "white",
-                                width: 2
-                            }
+                            outline: { color: "white", width: 2 }
                         };
-
-                        const textSymbol = {
-                            type: "text",
-                            color: "black",
-                            haloColor: "white",
-                            haloSize: "2px",
-                            text: loc.user_id,
-                            xoffset: 0,
-                            yoffset: -20,
-                            font: {
-                                size: 12,
-                                family: "Arial, sans-serif",
-                                weight: "bold"
-                            }
-                        };
-
-                        const markerGraphic = new Graphic({
-                            geometry: point,
-                            symbol: markerSymbol
-                        });
-
-                        const labelGraphic = new Graphic({
-                            geometry: point,
-                            symbol: textSymbol
-                        });
-
-                        graphicsLayer.addMany([markerGraphic, labelGraphic]);
+                        const markerGraphic = new Graphic({ geometry: point, symbol: markerSymbol });
+                        view.graphics.add(markerGraphic);
                     });
 
-                    // Routing logic
-                    let startPoint, endPoint;
+                    document.getElementById("zoomIn").addEventListener("click", () => view.goTo({ zoom: view.zoom + 1 }));
+                    document.getElementById("zoomOut").addEventListener("click", () => view.goTo({ zoom: view.zoom - 1 }));
+
+                    window.updateRoute = (points) => {
+                        view.graphics.removeAll();
+
+                        const [start, end] = points;
+                        const routeParams = new RouteParameters({
+                            stops: new FeatureSet({
+                                features: [
+                                    new Graphic({ geometry: { type: "point", longitude: start.longitude, latitude: start.latitude } }),
+                                    new Graphic({ geometry: { type: "point", longitude: end.longitude, latitude: end.latitude } }),
+                                ],
+                            }),
+                            returnDirections: true,
+                        });
+
+                        route.solve("https://route.arcgis.com/arcgis/rest/services/World/Route/NAServer/Route_World", routeParams)
+                            .then((data) => {
+                                const routeResult = data.routeResults[0].route;
+                                routeResult.symbol = {
+                                    type: "simple-line",
+                                    color: [0, 0, 255, 0.5],
+                                    width: 4,
+                                };
+                                view.graphics.add(routeResult);
+                            })
+                            .catch((error) => console.error(error));
+                    };
+
                     view.on("click", (event) => {
-                        if (!startPoint) {
-                            startPoint = {
-                                type: "point",
-                                longitude: event.mapPoint.longitude,
-                                latitude: event.mapPoint.latitude
-                            };
-
-                            const startGraphic = new Graphic({
-                                geometry: startPoint,
-                                symbol: {
-                                    type: "simple-marker",
-                                    color: "blue",
-                                    size: "10px",
-                                    outline: {
-                                        color: "white",
-                                        width: 2
-                                    }
-                                }
-                            });
-                            graphicsLayer.add(startGraphic);
-                        } else if (!endPoint) {
-                            endPoint = {
-                                type: "point",
-                                longitude: event.mapPoint.longitude,
-                                latitude: event.mapPoint.latitude
-                            };
-
-                            const endGraphic = new Graphic({
-                                geometry: endPoint,
-                                symbol: {
-                                    type: "simple-marker",
-                                    color: "green",
-                                    size: "10px",
-                                    outline: {
-                                        color: "white",
-                                        width: 2
-                                    }
-                                }
-                            });
-                            graphicsLayer.add(endGraphic);
-
-                            const routeParams = new RouteParameters({
-                                stops: new FeatureSet({
-                                    features: [
-                                        new Graphic({ geometry: startPoint }),
-                                        new Graphic({ geometry: endPoint })
-                                    ]
-                                }),
-                                returnDirections: true
-                            });
-
-                            route.solve("https://route.arcgis.com/arcgis/rest/services/World/Route/NAServer/Route_World", routeParams)
-                                .then((data) => {
-                                    data.routeResults.forEach((result) => {
-                                        const routeGraphic = new Graphic({
-                                            geometry: result.route.geometry,
-                                            symbol: {
-                                                type: "simple-line",
-                                                color: "blue",
-                                                width: 4
-                                            }
-                                        });
-                                        graphicsLayer.add(routeGraphic);
-                                    });
-                                });
-                        }
-                    });
-
-                    // Zoom controls
-                    document.getElementById("zoomIn").addEventListener("click", () => {
-                        view.goTo({ zoom: view.zoom + 1 }, { duration: 500 });
-                    });
-
-                    document.getElementById("zoomOut").addEventListener("click", () => {
-                        view.goTo({ zoom: view.zoom - 1 }, { duration: 500 });
+                        const { longitude, latitude } = event.mapPoint;
+                        window.ReactNativeWebView.postMessage(JSON.stringify({ longitude, latitude }));
                     });
                 });
             </script>
@@ -276,30 +209,24 @@ const MapScreen = ({ route }) => {
     return (
         <SafeAreaView style={styles.container}>
             <WebView
-                key={`${JSON.stringify(groupLocations)}-${userInfo.username}`} // Force re-render on changes
+                ref={webViewRef}
                 originWhitelist={['*']}
                 source={{ html: generateMapHtml() }}
                 scrollEnabled={false}
                 style={styles.webView}
+                onMessage={(event) => {
+                    const point = JSON.parse(event.nativeEvent.data);
+                    handleMapClick(point.longitude, point.latitude);
+                }}
             />
         </SafeAreaView>
     );
 };
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#fff',
-    },
-    title: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        textAlign: 'center',
-        marginVertical: 10,
-    },
-    webView: {
-        flex: 1,
-    },
+    container: { flex: 1, backgroundColor: '#fff' },
+    title: { fontSize: 18, fontWeight: 'bold', textAlign: 'center', marginVertical: 10 },
+    webView: { flex: 1 },
 });
 
 export default MapScreen;
