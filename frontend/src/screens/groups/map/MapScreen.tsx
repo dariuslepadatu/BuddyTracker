@@ -10,7 +10,7 @@ import { decode as base64Decode } from 'base-64';
 const MapScreen = ({ route }) => {
     const { group } = route.params;
     const [groupLocations, setGroupLocations] = useState([]);
-    const [apiKey, setApiKey] = useState('');
+    const [apiKey, setApiKey] = useState('AAPTxy8BH1VEsoebNVZXo8HurAdjI7kDqNtW_NVMq0DreHLMRx7Zu3s_TI87x2MWfEcx6LPVz_2CDLrmtOkf8o3kbe7nmv-hd57D8Ij4E1BWzMjsZgUbSownTf6-nRQnxcWFKo9cMzdI_t5V2fbSqaFv-BQ3duGXqNTa6obM7UyyE_DY49R7FE7_xg5jVjJJHq0i4ipZ65-RgBeQumUW-pwKfCVYmtr_3KGJ9lK6XMkoeqo.AT1_7CnoYY9g');
     const [userInfo, setUserInfo] = useState({});
     const [readyToRender, setReadyToRender] = useState(false);
     const [searchText, setSearchText] = useState('');
@@ -106,6 +106,17 @@ const MapScreen = ({ route }) => {
                     width: 100%;
                     overflow: hidden;
                 }
+                .distance-info {
+                    position: absolute;
+                    top: 10px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    background-color: rgba(255, 255, 255, 0.8);
+                    padding: 5px 10px;
+                    border-radius: 5px;
+                    font-size: 14px;
+                    z-index: 1000;
+                }
             </style>
         </head>
         <body>
@@ -115,8 +126,11 @@ const MapScreen = ({ route }) => {
                     "esri/Map",
                     "esri/views/MapView",
                     "esri/Graphic",
+                    "esri/rest/route",
+                    "esri/rest/support/RouteParameters",
+                    "esri/rest/support/FeatureSet",
                     "esri/config"
-                ], function(Map, MapView, Graphic, esriConfig) {
+                ], function(Map, MapView, Graphic, route, RouteParameters, FeatureSet, esriConfig) {
                     const map = new Map({ basemap: "topo-vector" });
 
                     const view = new MapView({
@@ -129,6 +143,8 @@ const MapScreen = ({ route }) => {
                     esriConfig.apiKey = "${apiKey}";
 
                     const locations = ${JSON.stringify(groupLocations)};
+                    let selectedPoints = [];
+
                     locations.forEach(loc => {
                         const point = { type: "point", longitude: loc.longitude, latitude: loc.latitude };
                         const markerSymbol = {
@@ -150,6 +166,80 @@ const MapScreen = ({ route }) => {
                         view.graphics.addMany([markerGraphic, labelGraphic]);
                     });
 
+                    const routeUrl = "https://route.arcgis.com/arcgis/rest/services/World/Route/NAServer/Route_World";
+
+                    const updateDistanceInfo = (distance) => {
+                        document.getElementById("distanceInfo").innerText = \`Distance: \${distance.toFixed(2)} km\`;
+                    };
+
+                    const calculateRoute = () => {
+                        if (selectedPoints.length === 2) {
+                            const [start, end] = selectedPoints;
+
+                            const routeParams = new RouteParameters({
+                                stops: new FeatureSet({
+                                    features: [
+                                        new Graphic({ geometry: { type: "point", longitude: start.longitude, latitude: start.latitude } }),
+                                        new Graphic({ geometry: { type: "point", longitude: end.longitude, latitude: end.latitude } }),
+                                    ],
+                                }),
+                                returnDirections: true,
+                            });
+
+                            route.solve(routeUrl, routeParams)
+                                .then((data) => {
+                                    if (data.routeResults.length > 0) {
+                                        const routeResult = data.routeResults[0].route;
+                                        const distance = data.routeResults[0].directions.totalLength;
+
+                                        // Add route to the map
+                                        routeResult.symbol = {
+                                            type: "simple-line",
+                                            color: [0, 0, 255, 0.8],
+                                            width: 4,
+                                        };
+                                        view.graphics.add(routeResult);
+
+                                        // Update distance info
+                                        updateDistanceInfo(distance);
+                                    }
+                                })
+                                .catch((error) => console.error("Error calculating route:", error));
+                        }
+                    };
+
+                    view.on("click", (event) => {
+                        const point = {
+                            type: "point",
+                            longitude: event.mapPoint.longitude,
+                            latitude: event.mapPoint.latitude,
+                        };
+
+                        const markerSymbol = {
+                            type: "simple-marker",
+                            color: [0, 255, 0],
+                            size: "10px",
+                            outline: { color: [255, 255, 255], width: 2 },
+                        };
+
+                        const markerGraphic = new Graphic({
+                            geometry: point,
+                            symbol: markerSymbol,
+                        });
+
+                        view.graphics.add(markerGraphic);
+                        selectedPoints.push(point);
+
+                        if (selectedPoints.length === 2) {
+                            calculateRoute();
+                        }
+
+                        if (selectedPoints.length > 2) {
+                            selectedPoints.shift();
+                            view.graphics.removeAll();
+                        }
+                    });
+
                     // Define zoom functions
                     window.zoomIn = () => {
                         view.goTo({ zoom: view.zoom + 1 }, { duration: 500, easing: "ease-in-out" });
@@ -168,6 +258,7 @@ const MapScreen = ({ route }) => {
         </html>
     `;
     };
+
 
 
     if (!readyToRender) {
