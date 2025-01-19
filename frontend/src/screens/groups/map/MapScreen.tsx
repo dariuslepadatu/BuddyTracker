@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { SafeAreaView, StyleSheet } from 'react-native';
+import { SafeAreaView, StyleSheet, View, TextInput, FlatList, TouchableOpacity, Text, Button } from 'react-native';
 import { WebView } from 'react-native-webview';
-import { Text } from 'react-native-paper';
 import { useFocusEffect } from '@react-navigation/native';
 import { getGroupLocations } from '../../../helpers/backend_helper.ts';
 import ToastHelper from '../../../Components/toast';
@@ -14,7 +13,8 @@ const MapScreen = ({ route }) => {
     const [apiKey, setApiKey] = useState('');
     const [userInfo, setUserInfo] = useState({});
     const [readyToRender, setReadyToRender] = useState(false);
-    const [selectedPoints, setSelectedPoints] = useState([]);
+    const [searchText, setSearchText] = useState('');
+    const [filteredResults, setFilteredResults] = useState([]);
     const webViewRef = useRef(null);
 
     // Fetch user info
@@ -66,22 +66,30 @@ const MapScreen = ({ route }) => {
         }
     }, [userInfo, groupLocations]);
 
-    // Handle map click to update selected points
-    const handleMapClick = (longitude, latitude) => {
-        setSelectedPoints((prevPoints) => {
-            const updatedPoints = [...prevPoints, { longitude, latitude }];
-            return updatedPoints.slice(-2); // Păstrează doar ultimele două puncte
-        });
+    const handleSearch = (text) => {
+        setSearchText(text);
+        if (text.trim() === '') {
+            // Dacă textul este gol, resetează lista de rezultate
+            setFilteredResults([]);
+        } else {
+            // Filtrează locațiile
+            const results = groupLocations.filter((loc) =>
+                loc.user_id.toLowerCase().includes(text.toLowerCase())
+            );
+            setFilteredResults(results);
+        }
     };
 
-    // Update route in WebView when selected points change
-    useEffect(() => {
-        if (selectedPoints.length === 2 && webViewRef.current) {
+
+    const handleSelectFriend = (friend) => {
+        setSearchText(friend.user_id);
+        setFilteredResults([]);
+        if (webViewRef.current) {
             webViewRef.current.injectJavaScript(`
-                window.updateRoute(${JSON.stringify(selectedPoints)});
+                window.centerMap(${friend.longitude}, ${friend.latitude});
             `);
         }
-    }, [selectedPoints]);
+    };
 
     const generateMapHtml = () => {
         return `
@@ -98,41 +106,17 @@ const MapScreen = ({ route }) => {
                     width: 100%;
                     overflow: hidden;
                 }
-                .zoom-controls {
-                    position: absolute;
-                    top: 10px;
-                    left: 10px;
-                    z-index: 100;
-                }
-                .zoom-controls button {
-                    padding: 10px;
-                    margin: 5px;
-                    background-color: #fff;
-                    border: 1px solid #ccc;
-                    border-radius: 4px;
-                    cursor: pointer;
-                }
-                .zoom-controls button:hover {
-                    background-color: #f0f0f0;
-                }
             </style>
         </head>
         <body>
             <div id="viewDiv"></div>
-            <div class="zoom-controls">
-                <button id="zoomIn">Zoom In</button>
-                <button id="zoomOut">Zoom Out</button>
-            </div>
             <script>
                 require([
                     "esri/Map",
                     "esri/views/MapView",
                     "esri/Graphic",
-                    "esri/rest/route",
-                    "esri/rest/support/RouteParameters",
-                    "esri/rest/support/FeatureSet",
                     "esri/config"
-                ], function(Map, MapView, Graphic, route, RouteParameters, FeatureSet, esriConfig) {
+                ], function(Map, MapView, Graphic, esriConfig) {
                     const map = new Map({ basemap: "topo-vector" });
 
                     const view = new MapView({
@@ -153,50 +137,38 @@ const MapScreen = ({ route }) => {
                             size: "20px",
                             outline: { color: "white", width: 2 }
                         };
+                        const labelSymbol = {
+                            type: "text",
+                            color: "black",
+                            text: loc.user_id,
+                            xoffset: 0,
+                            yoffset: -20,
+                            font: { size: 12, family: "Arial" }
+                        };
                         const markerGraphic = new Graphic({ geometry: point, symbol: markerSymbol });
-                        view.graphics.add(markerGraphic);
+                        const labelGraphic = new Graphic({ geometry: point, symbol: labelSymbol });
+                        view.graphics.addMany([markerGraphic, labelGraphic]);
                     });
 
-                    document.getElementById("zoomIn").addEventListener("click", () => view.goTo({ zoom: view.zoom + 1 }));
-                    document.getElementById("zoomOut").addEventListener("click", () => view.goTo({ zoom: view.zoom - 1 }));
-
-                    window.updateRoute = (points) => {
-                        view.graphics.removeAll();
-
-                        const [start, end] = points;
-                        const routeParams = new RouteParameters({
-                            stops: new FeatureSet({
-                                features: [
-                                    new Graphic({ geometry: { type: "point", longitude: start.longitude, latitude: start.latitude } }),
-                                    new Graphic({ geometry: { type: "point", longitude: end.longitude, latitude: end.latitude } }),
-                                ],
-                            }),
-                            returnDirections: true,
-                        });
-
-                        route.solve("https://route.arcgis.com/arcgis/rest/services/World/Route/NAServer/Route_World", routeParams)
-                            .then((data) => {
-                                const routeResult = data.routeResults[0].route;
-                                routeResult.symbol = {
-                                    type: "simple-line",
-                                    color: [0, 0, 255, 0.5],
-                                    width: 4,
-                                };
-                                view.graphics.add(routeResult);
-                            })
-                            .catch((error) => console.error(error));
+                    // Define zoom functions
+                    window.zoomIn = () => {
+                        view.goTo({ zoom: view.zoom + 1 }, { duration: 500, easing: "ease-in-out" });
                     };
 
-                    view.on("click", (event) => {
-                        const { longitude, latitude } = event.mapPoint;
-                        window.ReactNativeWebView.postMessage(JSON.stringify({ longitude, latitude }));
-                    });
+                    window.zoomOut = () => {
+                        view.goTo({ zoom: view.zoom - 1 }, { duration: 500, easing: "ease-in-out" });
+                    };
+
+                    window.centerMap = (longitude, latitude) => {
+                        view.goTo({ center: [longitude, latitude], zoom: 14 });
+                    };
                 });
             </script>
         </body>
         </html>
     `;
     };
+
 
     if (!readyToRender) {
         return (
@@ -208,25 +180,80 @@ const MapScreen = ({ route }) => {
 
     return (
         <SafeAreaView style={styles.container}>
+            <View style={styles.controlsContainer}>
+                <TextInput
+                    style={styles.searchBar}
+                    placeholder="Search for a friend..."
+                    value={searchText}
+                    onChangeText={handleSearch}
+                />
+                <Button title="Zoom In" onPress={() => webViewRef.current.injectJavaScript('window.zoomIn();')} />
+                <Button title="Zoom Out" onPress={() => webViewRef.current.injectJavaScript('window.zoomOut();')} />
+            </View>
+            {filteredResults.length > 0 && (
+                <FlatList
+                    data={filteredResults}
+                    keyExtractor={(item) => item.user_id}
+                    renderItem={({ item }) => (
+                        <TouchableOpacity onPress={() => handleSelectFriend(item)} style={styles.resultItem}>
+                            <Text>{item.user_id}</Text>
+                        </TouchableOpacity>
+                    )}
+                    style={[styles.searchResults, { width: '90%' }]} // Aceeași lățime ca bara de căutare
+                />
+            )}
             <WebView
                 ref={webViewRef}
                 originWhitelist={['*']}
                 source={{ html: generateMapHtml() }}
                 scrollEnabled={false}
                 style={styles.webView}
-                onMessage={(event) => {
-                    const point = JSON.parse(event.nativeEvent.data);
-                    handleMapClick(point.longitude, point.latitude);
-                }}
             />
         </SafeAreaView>
+
     );
 };
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#fff' },
-    title: { fontSize: 18, fontWeight: 'bold', textAlign: 'center', marginVertical: 10 },
     webView: { flex: 1 },
+    controlsContainer: {
+        position: 'absolute',
+        top: 10,
+        left: 10,
+        right: 10,
+        zIndex: 1000,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+    },
+    searchBar: {
+        flex: 1,
+        height: 40,
+        borderColor: '#ccc',
+        borderWidth: 1,
+        borderRadius: 5,
+        paddingHorizontal: 10,
+        backgroundColor: '#fff',
+        marginRight: 10,
+    },
+    searchResults: {
+        maxHeight: 150,
+        position: 'absolute',
+        top: 60, // Apare sub bara de căutare
+        left: 10,
+        zIndex: 1001,
+        borderColor: '#ccc',
+        borderWidth: 1,
+        borderRadius: 5,
+        backgroundColor: '#fff',
+    },
+    resultItem: {
+        padding: 10,
+        borderBottomColor: '#ccc',
+        borderBottomWidth: 1,
+    },
 });
+
 
 export default MapScreen;
